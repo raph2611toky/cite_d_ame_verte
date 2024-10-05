@@ -21,7 +21,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ['id', 'name', 'email', 'contact', 'adress', 'sexe', 'profile_url', 'last_login', 'joined_at']
+        fields = ['id', 'name', 'email', 'contact', 'adress', 'sexe', 'profile_url', 'is_active', 'last_login', 'joined_at']
 
     def get_adress(self, obj):
         return obj.adress
@@ -59,12 +59,9 @@ class LoginClientSerializer(serializers.Serializer):
         client = self.authenticate(email=email, password=password)
 
         if not client:
-            raise AuthenticationFailed('Identifiants incorrects.')
-        if not client.is_email_verified:
-            raise AuthenticationFailed('E-mail non vérifié.')
-        
+            raise AuthenticationFailed('Identifiants incorrects.')        
         client.is_active = True
-        client.last_login = timezone.now()
+        client.last_login = get_timezone()
         client.save()
 
         data = {}
@@ -84,6 +81,7 @@ class RegisterClientSerializer(serializers.ModelSerializer):
         fields = ['email', 'password', 'name', 'contact', 'adress', 'sexe']
 
     def validate(self, attrs):
+        self.create(attrs)
         return attrs
 
     def create(self, validated_data):

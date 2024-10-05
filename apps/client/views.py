@@ -66,10 +66,12 @@ class RegisterClientView(APIView):
         try:
             if self.check_if_client_exist(request.data['email']):
                 return Response({'erreur':'email existant'},status=400)
-            serializer = RegisterSerializer(data=request.data)
+            user_data = request.data
+            if user_data.get('sexe', 'I').lower() not in ['masculin', 'feminin']: user_data['sexe'] = 'I'
+            else: user_data['sexe'] = user_data['sexe'].strip()[0].upper()
+            serializer = RegisterClientSerializer(data=user_data)
             if serializer.is_valid(raise_exception=True):
-                client = Client.objects.get(email=serializer.data['email'])
-                return Response({'email':client.email, 'password':client.password}, status=status.HTTP_201_CREATED)
+                return Response({'email':serializer['email']}, status=status.HTTP_201_CREATED)
             else:
                 return Response({'erreur':'erreur de serialisation'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:

@@ -29,10 +29,10 @@ class User(AbstractUser):
     contact = models.CharField(max_length=20, null=False)
     sexe = models.CharField(max_length=20, choices=SEXE, default='I')
     domaine = models.CharField(max_length=50)
-    proffession = models.CharField(max_length=50)
+    profession = models.CharField(max_length=50)
     organisation = models.CharField(max_length=100)
     credit_vert = models.IntegerField(default=0)
-    profile = models.ImageField(upload_to='profiles/users/', default='profiles/users/default.jpg')
+    profile = models.ImageField(upload_to='profiles/users/', default='profiles/users/default.png')
 
     username = None
     USERNAME_FIELD = 'email'

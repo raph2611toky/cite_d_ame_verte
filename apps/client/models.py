@@ -26,7 +26,7 @@ class Client(models.Model):
     sexe = models.CharField(max_length=20, choices=SEXE, default='I')
     is_active = models.BooleanField(default=False)
     credit_vert = models.IntegerField(default=0)
-    profile = models.ImageField(upload_to='profiles/client/', default='profiles/client/default.jpg')
+    profile = models.ImageField(upload_to='profiles/client/', default='profiles/client/default.png')
     last_login = models.DateTimeField(default=get_timezone())
     joined_at = models.DateTimeField(default=get_timezone())
     
