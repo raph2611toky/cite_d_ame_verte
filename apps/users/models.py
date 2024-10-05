@@ -32,6 +32,7 @@ class User(AbstractUser):
     proffession = models.CharField(max_length=50)
     organisation = models.CharField(max_length=100)
     credit_vert = models.IntegerField(default=0)
+    profile = models.ImageField(upload_to='profiles/users/', default='profiles/users/default.jpg')
 
     username = None
     USERNAME_FIELD = 'email'

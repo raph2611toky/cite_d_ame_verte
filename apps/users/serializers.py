@@ -1,6 +1,8 @@
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import update_last_login
+from django.conf import settings
 
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
@@ -10,14 +12,23 @@ from rest_framework_simplejwt.serializers import PasswordField
 from apps.users.models import User
 
 class UserSerializer(serializers.ModelSerializer):
+    profile_url = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'name', 'email', 'contact', 'sexe', 'domaine', 'proffession', 'organisation', 'is_active', 'last_login', 'date_joined']
+        fields = ['id', 'name', 'email', 'contact', 'sexe', 'domaine', 'proffession', 'organisation', 'profile_url', 'is_active', 'last_login', 'date_joined']
 
     def get_name(self,obj):
         return obj.first_name.capitalize() + ' ' + obj.last_name.capitalize()
+    
+    def update(self, instance, validate_data):
+        if 'password' in validate_data:
+            validate_data['password'] = make_password(validate_data.get('password'))
+        return super(UserSerializer, self).update(instance, validate_data)
+
+    def get_profile_url(self, obj):
+        return f"{settings.BASE_URL}api/users{obj.profile.url}" if obj.profile else None
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(write_only=True)

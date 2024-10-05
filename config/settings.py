@@ -18,7 +18,8 @@ DEBUG = True
 ALLOWED_HOSTS = [IP_ADDR]
 
 LOCAL_APPS = [
-    'apps.users.apps.UsersConfig'
+    'apps.users.apps.UsersConfig',
+    'apps.client.apps.ClientConfig'
 ]
 
 THIRD_PARTY_APPS = [
