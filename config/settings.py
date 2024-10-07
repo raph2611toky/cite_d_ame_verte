@@ -19,7 +19,8 @@ ALLOWED_HOSTS = [IP_ADDR]
 
 LOCAL_APPS = [
     'apps.users.apps.UsersConfig',
-    'apps.client.apps.ClientConfig'
+    'apps.client.apps.ClientConfig',
+    'apps.evenements.apps.EvenementsConfig',
 ]
 
 THIRD_PARTY_APPS = [
