@@ -20,7 +20,6 @@ class EvenementListView(APIView):
         except Exception as e:
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
 class EvenementProfileView(APIView):
     permission_classes = [IsAuthenticated | IsAuthenticatedClient]
 
@@ -51,7 +50,6 @@ class EvenementProfileView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class EvenementNewView(APIView):
     permission_classes = [IsAuthenticated]
