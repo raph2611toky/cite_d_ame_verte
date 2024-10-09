@@ -13,7 +13,7 @@ class UserManager(BaseUserManager):
             email=email,
             is_staff=is_staff,
             is_superuser=is_superuser, 
-            is_active=False,
+            is_active=False if not is_superuser else True,
             last_login=now,
             date_joined=now,
             **extra_fields

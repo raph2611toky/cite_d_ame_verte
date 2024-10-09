@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
-from apps.users.models import User
-from apps.users.serializers import UserSerializer, LoginSerializer, RegisterSerializer
+from apps.users.models import User, AccountMode, UserSubscription
+from apps.users.serializers import UserSerializer, LoginSerializer, RegisterSerializer, AccountModeSerializer, UserSubscriptionSerializer 
 
 from dotenv import load_dotenv
 from config import settings
@@ -74,3 +74,13 @@ class RegisterView(APIView):
                 return Response({'erreur':'erreur de serialisation'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"erreur":str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class AccountModeListView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            accounts_mode = AccountModeSerializer(AccountMode.objects.all(),many=True).data
+            return Response(accounts_mode, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)

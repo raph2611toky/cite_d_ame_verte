@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from config.helpers.authentications import UserOrClientAuthentication
 from config.helpers.permissions import IsAuthenticatedUserOrClient
+from apps.client.permissions import IsAuthenticatedClient
 
 from apps.formations.models import Formation, FormationPayment
 from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer
@@ -48,7 +49,7 @@ class FormationProfileView(APIView):
                 return Response({'erreur': 'Vous n\'avez pas l\'authorisation de faire cette action.'}, status=status.HTTP_400_BAD_REQUEST)
             serializer = FormationSerializer(formation, data=request.data, partial=True)
             if serializer.is_valid():
-                formation_serializer.save()
+                formation_serializer = serializer.save()
 
                 if not formation.is_free:
                     payment_data = request.data.get('payment')
@@ -137,4 +138,30 @@ class FormationPaymentView(APIView):
 
 
 class FormationSubscription(APIView):
+    permission_classes = [IsAuthenticatedClient]
+    authentication_classes = []
     
+    def post(self, request):
+        try:
+            client = request.user
+            formation_payment_id = request.data.get('formation_payment')
+            if not formation_payment_id:
+                return Response({"error": "Formation payment ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                formation_payment = FormationPayment.objects.get(id=formation_payment_id)
+            except FormationPayment.DoesNotExist:
+                return Response({"error": "Formation payment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            subscription_data = {
+                'client': client.id,
+                'formation_payment': formation_payment.id
+            }
+            serializer = ClientFormationSubscriptionSerializer(data=subscription_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)

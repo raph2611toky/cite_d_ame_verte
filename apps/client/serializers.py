@@ -21,7 +21,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ['id', 'name', 'email', 'contact', 'adress', 'sexe', 'profile_url', 'is_active', 'last_login', 'joined_at']
+        fields = ['id', 'first_name', 'last_name', 'email', 'contact', 'adress', 'sexe', 'profile_url', 'is_active', 'last_login', 'joined_at']
 
     def get_adress(self, obj):
         return obj.adress
@@ -78,7 +78,7 @@ class RegisterClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ['email', 'password', 'name', 'contact', 'adress', 'sexe']
+        fields = ['email', 'password', 'first_name', 'last_name', 'contact', 'adress', 'sexe']
 
     def validate(self, attrs):
         self.create(attrs)
@@ -86,9 +86,9 @@ class RegisterClientSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         hashed_password = make_password(validated_data['password'])
-
         client = Client.objects.create(
-            name=validated_data['name'].capitalize(),
+            first_name=validated_data['first_name'].capitalize(),
+            last_name=validated_data['last_name'],
             email=validated_data['email'],
             contact=validated_data['contact'],
             adress=validated_data['adress'],
@@ -97,7 +97,6 @@ class RegisterClientSerializer(serializers.ModelSerializer):
         )
         
         client.save()
-        
         client_data = ClientSerializer(client).data
         data = {
             'email': client_data['email']

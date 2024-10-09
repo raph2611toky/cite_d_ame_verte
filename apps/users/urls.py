@@ -1,7 +1,7 @@
 from rest_framework.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.users.views import ProfileView, LogoutView, LoginView, RegisterView
+from apps.users.views import ProfileView, LogoutView, LoginView, RegisterView, AccountModeListView
 
 app_name = 'users'
 
@@ -10,4 +10,5 @@ urlpatterns = [
     path('users/login/', LoginView.as_view(), name='login'), # POST
     path('users/register/', RegisterView.as_view(), name='register'), # POST
     path('users/logout/', LogoutView.as_view(), name='logout'), # PUT
+    path('accountsmode/list/', AccountModeListView.as_view(), name='accounts_mode'), # GET
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

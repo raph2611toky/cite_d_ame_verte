@@ -17,8 +17,10 @@ def default_created_at():
     return timezone.now() + timedelta(hours=int(tz))
 
 class AccountMode(models.Model):
+    id_account_mode = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=15, default='MGA')
     free_trial_days = models.IntegerField(default=0)
     validity_days = models.IntegerField()
 

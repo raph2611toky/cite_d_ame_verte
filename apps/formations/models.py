@@ -32,10 +32,8 @@ class FormationSession(models.Model):
     class Meta:
         db_table = 'formation_session'
     
-
-
 class FileFormationSession(models.Model):
-    id_file_evenement = models.AutoField(primary_key=True)
+    id_file_session = models.AutoField(primary_key=True)
     file = models.FileField(upload_to='formations/sessions/files/')
     formation_session = models.ForeignKey(FormationSession, on_delete=models.CASCADE, related_name='files')
     created_at = models.DateTimeField(default=get_timezone())
@@ -47,9 +45,11 @@ class FileFormationSession(models.Model):
         db_table = 'file_formation_session'
 
 class FormationPayment(models.Model):
+    id_formation_payment = models.AutoField(primary_key=True)
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='payments')
     organiser = models.ForeignKey(User, on_delete=models.CASCADE, related_name='formation_payments')
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=15, default='MGA')
     validity_days = models.IntegerField()
 
     def __str__(self):
@@ -57,7 +57,6 @@ class FormationPayment(models.Model):
 
     class Meta:
         db_table = 'formation_payments'
-
 
 class ClientFormationSubscription(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='formation_subscriptions')
