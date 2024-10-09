@@ -24,6 +24,7 @@ class Formation(models.Model):
 class FormationSession(models.Model):
     id_formationsession = models.AutoField(primary_key=True)
     description = models.CharField(max_length=100)
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='sessions')
     created_at = models.DateTimeField(default=get_timezone())
     
     def __str__(self):

@@ -19,7 +19,12 @@ class ClientFormationSubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClientFormationSubscription
-        fields = ['formation_payment', 'start_date', 'end_date']
+        fields = [ 'client', 'formation_payment', 'start_date', 'end_date']
+        
+    def validate(self, attrs):
+        attrs = self.context
+        attrs['client'] = Client.objects.get(id=attrs['client'])
+        return attrs
     
     def get_start_date(self, obj):
         return obj.start_date.strftime('%d-%m-%Y')
@@ -42,7 +47,7 @@ class FormationSessionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = FormationSession
-        fields = ['id_formationsession', 'description', 'files', 'created_at']
+        fields = ['id_formationsession', 'formation', 'description', 'files', 'created_at']
         
     def get_created_at(self, obj):
         return obj.created_at.strftime('%d-%m-%Y')

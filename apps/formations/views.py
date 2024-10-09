@@ -2,14 +2,15 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from config.helpers.authentications import UserOrClientAuthentication
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from apps.client.permissions import IsAuthenticatedClient
 from django.utils import timezone
 
-from apps.formations.models import Formation, FormationPayment
-from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer, ClientFormationSubscriptionSerializer
+from apps.formations.models import Formation, FormationPayment, FileFormationSession
+from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer, ClientFormationSubscriptionSerializer, FormationSessionSerializer
 
 from datetime import timedelta
 import traceback
@@ -167,24 +168,54 @@ class FormationSubscription(APIView):
             formation_payment = formation.payments
             if formation_payment is None:
                 return Response({'erreur': 'Formation has no payments.'}, status=status.HTTP_400_BAD_REQUEST)
-            print('formation payment found .....')
-            print(formation_payment)
             start_date = timezone.now()
+            end_date = timezone.now() + timedelta(days=formation_payment.validity_days)
             subscription_data = {
                 'client': client.id,
-                'formation_payment': formation_payment.id_formation_payment
+                'formation_payment': formation_payment,
+                'start_date': start_date,#.strftime('%Y-%m-%d'),
+                'end_date': end_date,#.strftime('%Y-%m-%d')
             }
-            print(subscription_data)
-            serializer = ClientFormationSubscriptionSerializer(data=subscription_data)
+            serializer = ClientFormationSubscriptionSerializer(data=subscription_data, context=subscription_data)
             if serializer.is_valid():
                 serializer.save()
                 formation.participants.add(request.client)
                 formation.save()
-                print('client added ....')
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            print('client subscription is not valid')
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             print(traceback.format_exc())
+            return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class FormationSessionNewView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def validate_data(self, data):
+        try:
+            keys = ['description', 'formation']
+            if any(key not in data.keys()for key in keys):
+                return False
+            return Formation.objects.filter(id_formation=data['formation']).exists()
+        except Exception:
+            return False
+    
+    def post(self, request):
+        try:
+            # request.FILES = ['files']
+            # request.data = ['formation','description']
+            if not self.validate_data(request.data):
+                return Response({'erreur': 'Tous les champs sont requist'}, status=status.HTTP_400_BAD_REQUEST)
+            files = request.FILES.getlist('files')
+            formation = Formation.objects.get(id_formation=request.data['formation'])
+            if request.user not in formation.organisateurs.all():
+                return Response({'erreur':'Vous n\'avez pas l\'autorisation de faire cette action'}, status=status.HTTP_401_UNAUTHORIZED)
+            serializer = FormationSessionSerializer(data=request.data)
+            if serializer.is_valid():
+                formation_session_save = serializer.save(formation=formation)
+                for file in files:
+                    FileFormationSession.objects.create(file=file, formation_session=formation_session_save)
+                return Response({'message':'Session successfully added'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)

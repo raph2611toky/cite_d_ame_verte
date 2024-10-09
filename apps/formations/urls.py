@@ -7,7 +7,8 @@ from apps.formations.views import (
     FormationProfileView, 
     FormationNewView,
     #FormationPaymentView, 
-    FormationSubscription
+    FormationSubscription,
+    FormationSessionNewView
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('formations/new/', FormationNewView.as_view(), name='formation-new'), # POST
     #path('formations/payments/', FormationPaymentView.as_view(), name='formation-payment'), # POST
     path('formations/subscribe/', FormationSubscription.as_view(), name='formation-subscribe'), # POST
+    path('formation/sessions/new/', FormationSessionNewView.as_view(), name='new sessions'), # POST
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
