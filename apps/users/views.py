@@ -6,6 +6,7 @@ from rest_framework.request import Request
 from rest_framework.views import APIView
 
 from apps.users.models import User, AccountMode, UserSubscription
+from apps.client.models import Client
 from apps.users.serializers import UserSerializer, LoginSerializer, RegisterSerializer, AccountModeSerializer, UserSubscriptionSerializer 
 
 from dotenv import load_dotenv
@@ -56,12 +57,25 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
     
     def check_if_user_exist(self, email):
-        return User.objects.filter(email=email).exists()
+        return User.objects.filter(email=email).exists() or Client.objects.filter(email=email).exists()
+    
+    def validate_data(self, data):
+        try:
+            keys = ['first_name','last_name','email', 'adress','password','contact', 'sexe', 'domaine', 'profession', 'organisation']
+            if any(key not in data.keys() for key in keys):
+                return False
+            return True
+        except Exception as e:
+            print(e)
+            return False
     
     
     def post(self, request):
-        # request.data.keys = ['first_name','last_name','email','password','contact', 'sexe', 'domaine', 'profession', 'organisation']
+        # request.data.keys = ['first_name','last_name','email','password','contact', 'sexe', 'adress', 'domaine', 'profession', 'organisation']
         try:
+            print(request.data)
+            if not self.validate_data(request.data):
+                return Response({'erreur':'Tous les attributs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
             if self.check_if_user_exist(request.data['email']):
                 return Response({'erreur':'email existant'},status=400)
             user_data = request.data
@@ -69,6 +83,7 @@ class RegisterView(APIView):
             else: user_data['sexe'] = user_data['sexe'].strip()[0].upper()
             serializer = RegisterSerializer(data=user_data)
             if serializer.is_valid(raise_exception=True):
+                # serializer.save()
                 return Response({"email":serializer.validated_data["email"]}, status=status.HTTP_201_CREATED)
             else:
                 return Response({'erreur':'erreur de serialisation'}, status=status.HTTP_400_BAD_REQUEST)
@@ -82,5 +97,25 @@ class AccountModeListView(APIView):
         try:
             accounts_mode = AccountModeSerializer(AccountMode.objects.all(),many=True).data
             return Response(accounts_mode, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class ConfigureAccountMode(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def validate_data(self, data):
+        try:
+            return AccountMode.objects.filter(id_account_mode=data['account_mode']).exists()
+        except Exception:
+            return False
+    
+    def post(self, request):
+        # request.data = ['account_mode']
+        try:
+            if not self.validate_data(request.data):
+                return Response({'erreur': 'mode de compte invalid'}, status=status.HTTP_404_NOT_FOUND)
+            account_mode = AccountMode.objects.get(id_account_mode=request.data['account_mode'])
+            UserSubscription.objects.create(user=request.user, account_mode=account_mode)
+            return Response({'message': 'Configuration reussi'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)

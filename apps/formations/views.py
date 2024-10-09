@@ -91,7 +91,7 @@ class FormationNewView(APIView):
                 return False
             if not data['is_free']:
                 payment_keys = ['price', 'validity_days']
-                if any(key not in data['is_free'].keys()for key in payment_keys):
+                if any(key not in data['payment'].keys()for key in payment_keys):
                     return False
             return True
         except Exception as e:
@@ -106,11 +106,12 @@ class FormationNewView(APIView):
             serializer = FormationSerializer(data=request.data)
             if serializer.is_valid():
                 formation_save = serializer.save()
-                formation = Formation.objects.get(id_formtion=formation_save.id_formation)
+                formation = Formation.objects.get(id_formation=formation_save.id_formation)
                 formation.organisateurs.add(request.user.id)
                 if not formation.is_free:
                     payment_data = request.data.get('payment')
                     if payment_data:
+                        print(payment_data)
                         payment_serializer = FormationPaymentSerializer(data=payment_data)
                         if payment_serializer.is_valid():
                             payment_serializer.save(formation=formation, organiser=request.user)

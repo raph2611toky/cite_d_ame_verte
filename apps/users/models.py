@@ -40,6 +40,7 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=64, null=False)
     last_name = models.CharField(max_length=64, null=True)
     email = models.EmailField('email', unique=True)
+    adress = models.CharField(max_length=100, default='Inconu')
     contact = models.CharField(max_length=20, null=False)
     sexe = models.CharField(max_length=20, choices=SEXE, default='I')
     domaine = models.CharField(max_length=50)
@@ -55,7 +56,10 @@ class User(AbstractUser):
     objects = UserManager()
 
     def __str__(self):
-        return self.first_name.capitalize() + ' ' + self.last_name.capitalize()
+        if self.first_name and self.last_name:
+            return self.first_name.capitalize() + ' ' + self.last_name.capitalize()
+        else:
+            return self.email
 
     class Meta:
         db_table = 'users'

@@ -46,7 +46,7 @@ class FileFormationSession(models.Model):
 
 class FormationPayment(models.Model):
     id_formation_payment = models.AutoField(primary_key=True)
-    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='payments')
+    formation = models.OneToOneField(Formation, on_delete=models.CASCADE, related_name='payments')
     organiser = models.ForeignKey(User, on_delete=models.CASCADE, related_name='formation_payments')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=15, default='MGA')

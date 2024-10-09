@@ -2,13 +2,15 @@ from rest_framework import serializers
 
 from apps.formations.models import Formation, FormationPayment, ClientFormationSubscription, FileFormationSession, FormationSession
 from apps.client.models import Client
+from apps.client.serializers import ClientSerializer
+from apps.users.serializers import UserSerializer
 
 from django.conf import settings
 
 class FormationPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormationPayment
-        fields = ['formation', 'organiser', 'price', 'validity_days']
+        fields = ['price', 'validity_days']
 
 class ClientFormationSubscriptionSerializer(serializers.ModelSerializer):
     formation_payment = FormationPaymentSerializer(read_only=True)
@@ -38,8 +40,9 @@ class FormationSessionSerializer(serializers.ModelSerializer):
         return obj.created_at.strftime('%d-%m-%Y')
 
 class FormationSerializer(serializers.ModelSerializer):
-    payments = FormationPaymentSerializer(many=True, read_only=True)
-    participants = serializers.StringRelatedField(many=True)
+    payments = FormationPaymentSerializer(read_only=True)
+    participants = UserSerializer(many=True, read_only=True)
+    organisateurs = ClientSerializer(many=True, read_only=True)
     created_at = serializers.SerializerMethodField()
 
     class Meta:
@@ -48,3 +51,7 @@ class FormationSerializer(serializers.ModelSerializer):
 
     def get_created_at(self, obj):
         return obj.created_at.strftime('%d-%m-%Y')
+
+    def create(self, validated_data):
+        print(validated_data)
+        return super().create(validated_data)

@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import TokenError
 from rest_framework.views import APIView
 
 from apps.client.models import Client
+from apps.users.models import User
 from apps.client.permissions import IsAuthenticatedClient
 from apps.client.serializers import ClientSerializer, LoginClientSerializer, RegisterClientSerializer
 
@@ -48,7 +49,7 @@ class LoginClientView(APIView):
 
     def post(self, request):
         # request.data.keys = ['email', 'password']
-        serializer = self.serializer_class(data=request.data)
+        serializer = LoginClientSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
@@ -59,7 +60,7 @@ class RegisterClientView(APIView):
     permission_classes = [AllowAny]
     
     def check_if_client_exist(self, email):
-        return Client.objects.filter(email=email).exists()
+        return Client.objects.filter(email=email).exists() or User.objects.filter(email=email).exists()
         
     def post(self, request):
         # request.data.keys = ['first_name', 'last_name','email','password','contact', 'sexe', 'adress']

@@ -86,9 +86,9 @@ class EvenementNewView(APIView):
             return False
         return True
     
-    @transaction.atomic
     def post(self, request):
         try:
+            print(request.data)
             if not self.validate_data(request.data):
                 return Response({'erreur': 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -108,34 +108,36 @@ class EvenementNewView(APIView):
             latitude = float(latitude)
             longitude = float(longitude)
             
-            if name_emplacement and latitude and longitude:
+            with transaction.atomic():
                 emplacement, created = Emplacement.objects.get_or_create(
                     latitude=latitude,
                     longitude=longitude,
                     defaults={'name_emplacement': name_emplacement}
                 )
+                print('emplacement is created .....')
                 evenement_data['emplacement'] = emplacement
+                print(evenement_data)
+                evenement_serializer = EvenementSerializer(data=evenement_data, context={'evenement_data': evenement_data})
 
-            evenement_serializer = EvenementSerializer(data=evenement_data, context={'evenement_data': evenement_data})
+                if evenement_serializer.is_valid():
+                    print('evenement valid .....')
+                    evenement_save = evenement_serializer.save()
+                    evenement = Evenement.objects.get(id_evenement=evenement_save.id_evenement)
+                    evenement.organisateurs.add(request.user.id)
+                    evenement.save()
+                    print('organisers added...')
+            images = request.FILES.getlist('images')
+            for image in images:
+                ImageEvenement.objects.create(image=image, evenement=evenement)
 
-            if evenement_serializer.is_valid():
-                evenement_save = evenement_serializer.save()
-                evenement = Evenement.objects.get(id_evenement=evenement_save.id_evenement)
-                evenement.organisateurs.add(request.user.id)
-                evenement.save()
-                images = request.FILES.getlist('images')
-                for image in images:
-                    ImageEvenement.objects.create(image=image, evenement=evenement)
+            files = request.FILES.getlist('files')
+            for file in files:
+                FileEvenement.objects.create(file=file, evenement=evenement)
 
-                files = request.FILES.getlist('files')
-                for file in files:
-                    FileEvenement.objects.create(file=file, evenement=evenement)
-
-                return Response(evenement_serializer.data, status=status.HTTP_201_CREATED)
-            print('serializer is not valid...')
-            return Response(evenement_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(evenement_serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            print(e)
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
