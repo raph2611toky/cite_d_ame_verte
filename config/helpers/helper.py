@@ -5,6 +5,7 @@ from rest_framework.request import Request
 from django.contrib.auth.models import AnonymousUser
 
 from apps.client.models import ClientOutstandingToken, Client
+from apps.users.models import User
 
 from dotenv import load_dotenv
 
@@ -38,6 +39,16 @@ def is_token_blacklisted(token):
         print(e)
         return True
     
+def get_user(token):
+    try:
+        jwt_decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.SIMPLE_JWT['ALGORITHM']])
+        user_id = jwt_decoded.get('user_id')
+        if not user_id:
+            return AnonymousUser()
+        adminzone = User.objects.get(id=user_id)
+        return AnonymousUser() if not adminzone else adminzone
+    except (jwt.DecodeError, jwt.ExpiredSignatureError, User.DoesNotExist):
+        return AnonymousUser()
 
 def get_client(token):
     try:

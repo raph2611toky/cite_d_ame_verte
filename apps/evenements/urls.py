@@ -1,10 +1,11 @@
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.evenements.views import EvenementListView, EvenementProfileView, EvenementNewView
+from apps.evenements.views import EvenementListView, EvenementProfileView, EvenementNewView, EvenementProfileFindView
 
 urlpatterns = [
-    path('evenements/', EvenementListView.as_view(), name='evenement-list'),
-    path('evenements/new/', EvenementNewView.as_view(), name='evenement-new'),
-    path('evenements/<int:pk>/', EvenementProfileView.as_view(), name='evenement-detail'),
+    path('evenements/list/', EvenementListView.as_view(), name='evenement-list'), # GET
+    path('evenements/new/', EvenementNewView.as_view(), name='evenement-new'), # POST
+    path('evenement/<int:pk>/', EvenementProfileView.as_view(), name='evenement-detail'),# PUT, DELETE
+    path('evenement/find/<int:pk>/', EvenementProfileFindView.as_view(), name='find_evenement'), # GET
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
