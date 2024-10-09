@@ -16,6 +16,18 @@ def default_created_at():
         return timezone.now() - timedelta(hours=int(tz.replace("-","").strip()))
     return timezone.now() + timedelta(hours=int(tz))
 
+class AccountMode(models.Model):
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    free_trial_days = models.IntegerField(default=0)
+    validity_days = models.IntegerField()
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = 'account_modes'
+
 class User(AbstractUser):
     SEXE = [
         ('F', 'Féminin'),
@@ -45,3 +57,20 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'users'
+        
+class UserSubscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    account_mode = models.ForeignKey(AccountMode, on_delete=models.CASCADE, related_name='subscriptions')
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.end_date:
+            self.end_date = self.start_date + timedelta(days=self.account_mode.validity_days)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.account_mode.name}"
+
+    class Meta:
+        db_table = 'user_subscriptions'

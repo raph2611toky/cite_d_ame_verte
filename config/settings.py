@@ -21,6 +21,7 @@ LOCAL_APPS = [
     'apps.users.apps.UsersConfig',
     'apps.client.apps.ClientConfig',
     'apps.evenements.apps.EvenementsConfig',
+    'apps.formations.apps.FormationsConfig'
 ]
 
 THIRD_PARTY_APPS = [

@@ -1,3 +1,51 @@
 from django.db import models
+from apps.client.models import Client
+from apps.users.models import User
+from datetime import timedelta
+from config.helpers.helper import get_timezone
 
-# Create your models here.
+class Formation(models.Model):
+    id_formation = models.AutoField(primary_key=True)
+    name_formation = models.CharField(max_length=100)
+    description_formation = models.CharField(max_length=250)
+    domaine = models.CharField(max_length=100)
+    organisateurs = models.ManyToManyField(User, related_name='formations')
+    participants = models.ManyToManyField(Client, related_name='formations')
+    created_at = models.DateTimeField(default=get_timezone())
+    
+    def __str__(self):
+        return self.name_formation
+    
+    class Meta:
+        db_table = 'formations'
+    
+
+class FormationPayment(models.Model):
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='payments')
+    organiser = models.ForeignKey(User, on_delete=models.CASCADE, related_name='formation_payments')
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    validity_days = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.formation.name_formation} - {self.price}€"
+
+    class Meta:
+        db_table = 'formation_payments'
+
+
+class ClientFormationSubscription(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='formation_subscriptions')
+    formation_payment = models.ForeignKey(FormationPayment, on_delete=models.CASCADE, related_name='client_subscriptions')
+    start_date = models.DateTimeField(default=get_timezone())
+    end_date = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.end_date:
+            self.end_date = self.start_date + timedelta(days=self.formation_payment.validity_days)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.client.email} - {self.formation_payment.formation.name_formation}"
+
+    class Meta:
+        db_table = 'client_formation_subscriptions'
