@@ -18,7 +18,8 @@ class Client(models.Model):
         ('I', 'Inconnu')
     ]
     
-    name = models.CharField(max_length=125)
+    first_name = models.CharField(max_length=125)
+    last_name = models.CharField(max_length=125, default='')
     email = models.EmailField()
     password = models.TextField()
     contact = models.CharField(max_length=100)
@@ -38,7 +39,7 @@ class Client(models.Model):
         self.password = make_password(new_password)
 
     def __str__(self):
-        return self.name
+        return self.first_name + ' ' + self.last_name
 
     class Meta: 
         db_table = "client"

@@ -4,6 +4,7 @@ from apps.users.models import User
 from datetime import timedelta
 from config.helpers.helper import get_timezone
 
+
 class Formation(models.Model):
     id_formation = models.AutoField(primary_key=True)
     name_formation = models.CharField(max_length=100)
@@ -11,6 +12,7 @@ class Formation(models.Model):
     domaine = models.CharField(max_length=100)
     organisateurs = models.ManyToManyField(User, related_name='formations')
     participants = models.ManyToManyField(Client, related_name='formations')
+    is_free = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=get_timezone())
     
     def __str__(self):
@@ -18,7 +20,31 @@ class Formation(models.Model):
     
     class Meta:
         db_table = 'formations'
+        
+class FormationSession(models.Model):
+    id_formationsession = models.AutoField(primary_key=True)
+    description = models.CharField(max_length=100)
+    created_at = models.DateTimeField(default=get_timezone())
     
+    def __str__(self):
+        return self.description
+    
+    class Meta:
+        db_table = 'formation_session'
+    
+
+
+class FileFormationSession(models.Model):
+    id_file_evenement = models.AutoField(primary_key=True)
+    file = models.FileField(upload_to='formations/sessions/files/')
+    formation_session = models.ForeignKey(FormationSession, on_delete=models.CASCADE, related_name='files')
+    created_at = models.DateTimeField(default=get_timezone())
+
+    def __str__(self):
+        return self.file.name.split('/')[-1]
+    
+    class Meta:
+        db_table = 'file_formation_session'
 
 class FormationPayment(models.Model):
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='payments')
