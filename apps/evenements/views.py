@@ -5,13 +5,14 @@ from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from django.db import transaction
+## from django.db import transaction
 
 from apps.evenements.models import Evenement, Emplacement, ImageEvenement, FileEvenement
 from apps.evenements.serializers import EvenementSerializer
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from config.helpers.authentications import UserOrClientAuthentication
 
+import traceback
 
 class EvenementListView(APIView):
     authentication_classes = [UserOrClientAuthentication]
@@ -20,6 +21,21 @@ class EvenementListView(APIView):
     def get(self, request):
         try:
             evenements = Evenement.objects.all()
+            serializer = EvenementSerializer(evenements, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class EvenementFilterView(APIView):
+    authentication_classes = [UserOrClientAuthentication]
+    permission_classes = [IsAuthenticatedUserOrClient]
+
+    def get(self, request):
+        try:
+            if not request.user is None:
+                evenements = Evenement.objects.filter(organisateurs=request.user)
+            else:
+                evenements = Evenement.objects.filter(participants=request.client)
             serializer = EvenementSerializer(evenements, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -88,56 +104,50 @@ class EvenementNewView(APIView):
     
     def post(self, request):
         try:
-            print(request.data)
             if not self.validate_data(request.data):
                 return Response({'erreur': 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
 
-            evenement_data = request.data.copy()
+            files = request.FILES.getlist('files')
+            images = request.FILES.getlist('images')
+
+            evenement_data = request.data
 
             name_emplacement = evenement_data.pop('name_emplacement', "Inconu")
             latitude = evenement_data.pop('latitude')
             longitude = evenement_data.pop('longitude')
 
-            if isinstance(latitude, list):
-                latitude = latitude[0]
-            if isinstance(longitude, list):
-                longitude = longitude[0]
-            if isinstance(name_emplacement, list):
-                name_emplacement = name_emplacement[0]
+            # Conversion des coordonnées
+            latitude = float(latitude[0]) if isinstance(latitude, list) else float(latitude)
+            longitude = float(longitude[0]) if isinstance(longitude, list) else float(longitude)
+            name_emplacement = name_emplacement[0] if isinstance(name_emplacement, list) else name_emplacement
 
-            latitude = float(latitude)
-            longitude = float(longitude)
-            
-            with transaction.atomic():
-                emplacement, created = Emplacement.objects.get_or_create(
-                    latitude=latitude,
-                    longitude=longitude,
-                    defaults={'name_emplacement': name_emplacement}
-                )
-                print('emplacement is created .....')
-                evenement_data['emplacement'] = emplacement
-                print(evenement_data)
-                evenement_serializer = EvenementSerializer(data=evenement_data, context={'evenement_data': evenement_data})
+            emplacement, created = Emplacement.objects.get_or_create(
+                latitude=latitude,
+                longitude=longitude,
+                defaults={'name_emplacement': name_emplacement}
+            )
 
-                if evenement_serializer.is_valid():
-                    print('evenement valid .....')
-                    evenement_save = evenement_serializer.save()
-                    evenement = Evenement.objects.get(id_evenement=evenement_save.id_evenement)
-                    evenement.organisateurs.add(request.user.id)
-                    evenement.save()
-                    print('organisers added...')
-            images = request.FILES.getlist('images')
-            for image in images:
-                ImageEvenement.objects.create(image=image, evenement=evenement)
+            evenement_data['emplacement'] = emplacement
 
-            files = request.FILES.getlist('files')
-            for file in files:
-                FileEvenement.objects.create(file=file, evenement=evenement)
+            evenement_serializer = EvenementSerializer(data=evenement_data, context={'evenement_data': evenement_data})
 
-            return Response(evenement_serializer.data, status=status.HTTP_201_CREATED)
+            if evenement_serializer.is_valid():
+                evenement_save = evenement_serializer.save()
+                evenement = Evenement.objects.get(id_evenement=evenement_save.id_evenement)
+                evenement.organisateurs.add(request.user.id)
+                evenement.save()
+
+                for image in images:
+                    ImageEvenement.objects.create(image=image, evenement=evenement)
+
+                for file in files:
+                    FileEvenement.objects.create(file=file, evenement=evenement)
+
+                return Response(evenement_serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                print('Erreur dans le sérialiseur:', evenement_serializer.errors)
+                return Response(evenement_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(e)
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 

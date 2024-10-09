@@ -6,7 +6,7 @@ from apps.formations.views import (
     FormationProfileFindView, 
     FormationProfileView, 
     FormationNewView,
-    FormationPaymentView, 
+    #FormationPaymentView, 
     FormationSubscription
 )
 
@@ -15,6 +15,6 @@ urlpatterns = [
     path('formations/<int:id_formation>/', FormationProfileFindView.as_view(), name='formation-detail'), # GET
     path('formations/<int:id_formation>/edit/', FormationProfileView.as_view(), name='formation-edit'), # PUT, DELETE
     path('formations/new/', FormationNewView.as_view(), name='formation-new'), # POST
-    path('formations/payments/', FormationPaymentView.as_view(), name='formation-payment'), # POST
+    #path('formations/payments/', FormationPaymentView.as_view(), name='formation-payment'), # POST
     path('formations/subscribe/', FormationSubscription.as_view(), name='formation-subscribe'), # POST
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

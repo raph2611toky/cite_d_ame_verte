@@ -6,10 +6,13 @@ from rest_framework.permissions import IsAuthenticated
 from config.helpers.authentications import UserOrClientAuthentication
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from apps.client.permissions import IsAuthenticatedClient
+from django.utils import timezone
 
 from apps.formations.models import Formation, FormationPayment
-from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer
+from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer, ClientFormationSubscriptionSerializer
 
+from datetime import timedelta
+import traceback
 
 class FormationListView(APIView):
     authentication_classes = [UserOrClientAuthentication]
@@ -142,27 +145,46 @@ class FormationSubscription(APIView):
     permission_classes = [IsAuthenticatedClient]
     authentication_classes = []
     
-    def post(self, request):
+    def validate_data(self, data):
         try:
-            client = request.user
-            formation_payment_id = request.data.get('formation_payment')
-            if not formation_payment_id:
+            keys = ['formation']
+            if any(key not in data.keys()for key in keys):
+                return False
+            return Formation.objects.filter(id_formation=data['formation']).exists()
+        except Exception as e:
+            return False
+    
+    def post(self, request):
+        # request.data = ['fomation']
+        try:
+            if not self.validate_data(request.data):
+                return Response({'erreur', 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
+            client = request.client
+            formation_id = request.data.get('formation')
+            if not formation_id:
                 return Response({"error": "Formation payment ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-            try:
-                formation_payment = FormationPayment.objects.get(id=formation_payment_id)
-            except FormationPayment.DoesNotExist:
-                return Response({"error": "Formation payment not found."}, status=status.HTTP_404_NOT_FOUND)
-
+            formation = Formation.objects.get(id_formation=formation_id)
+            formation_payment = formation.payments
+            if formation_payment is None:
+                return Response({'erreur': 'Formation has no payments.'}, status=status.HTTP_400_BAD_REQUEST)
+            print('formation payment found .....')
+            print(formation_payment)
+            start_date = timezone.now()
             subscription_data = {
                 'client': client.id,
-                'formation_payment': formation_payment.id
+                'formation_payment': formation_payment.id_formation_payment
             }
+            print(subscription_data)
             serializer = ClientFormationSubscriptionSerializer(data=subscription_data)
             if serializer.is_valid():
                 serializer.save()
+                formation.participants.add(request.client)
+                formation.save()
+                print('client added ....')
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            print('client subscription is not valid')
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            print(traceback.format_exc())
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)

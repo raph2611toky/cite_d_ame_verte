@@ -53,7 +53,7 @@ class FormationPayment(models.Model):
     validity_days = models.IntegerField()
 
     def __str__(self):
-        return f"{self.formation.name_formation} - {self.price}€"
+        return f"{self.formation.name_formation} - {self.price} {self.currency}"
 
     class Meta:
         db_table = 'formation_payments'
@@ -63,11 +63,6 @@ class ClientFormationSubscription(models.Model):
     formation_payment = models.ForeignKey(FormationPayment, on_delete=models.CASCADE, related_name='client_subscriptions')
     start_date = models.DateTimeField(default=get_timezone())
     end_date = models.DateTimeField()
-
-    def save(self, *args, **kwargs):
-        if not self.end_date:
-            self.end_date = self.start_date + timedelta(days=self.formation_payment.validity_days)
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.client.email} - {self.formation_payment.formation.name_formation}"

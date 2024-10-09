@@ -34,7 +34,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'contact', 'adress', 'sexe', 'domaine', 'profession', 'organisation', 'profile_url', 'is_active', 'last_login', 'date_joined', 'subscriptions']
 
     def get_name(self, obj):
-        return obj.first_name.capitalize() + ' ' + obj.last_name.capitalize()
+        name = obj.first_name
+        if not obj.last_name is None:
+            name = name  + ' ' + obj.last_name
+        return name
 
     def get_profile_url(self, obj):
         return f"{settings.BASE_URL}api{obj.profile.url}" if obj.profile else None
@@ -80,8 +83,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         self.create(attrs)
         return attrs
         
-    def create(self, validated_data):        
-        print('create user ....')
+    def create(self, validated_data):
         users = User.objects.create(
             first_name=validated_data['first_name'].capitalize(),
             last_name=validated_data['last_name'].capitalize(),

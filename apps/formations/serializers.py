@@ -14,10 +14,18 @@ class FormationPaymentSerializer(serializers.ModelSerializer):
 
 class ClientFormationSubscriptionSerializer(serializers.ModelSerializer):
     formation_payment = FormationPaymentSerializer(read_only=True)
+    start_date = serializers.SerializerMethodField()
+    end_date = serializers.SerializerMethodField()
 
     class Meta:
         model = ClientFormationSubscription
-        fields = ['client', 'formation_payment', 'start_date', 'end_date']
+        fields = ['formation_payment', 'start_date', 'end_date']
+    
+    def get_start_date(self, obj):
+        return obj.start_date.strftime('%d-%m-%Y')
+    
+    def get_end_date(self, obj):
+        return obj.end_date.strftime('%d-%m-%Y')
 
 class FileFormationSessionSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
