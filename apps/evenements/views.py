@@ -15,9 +15,9 @@ from config.helpers.authentications import UserOrClientAuthentication
 import traceback
 
 class EvenementListView(APIView):
-    authentication_classes = [UserOrClientAuthentication]
-    permission_classes = [IsAuthenticatedUserOrClient]
-
+    # authentication_classes = [UserOrClientAuthentication]
+    # permission_classes = [IsAuthenticatedUserOrClient]
+# 
     def get(self, request):
         try:
             evenements = Evenement.objects.all()
