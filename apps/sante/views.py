@@ -42,44 +42,42 @@ class MenstruationNew(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
 
-    def validate_data(self, data):
-        try:
-            if 'end_date' not in data:
-                return False
-            return True
-        except Exception:
-            return False
-
+    # request.data.keys = ['start_date']
     def post(self, request):
         try:
-            if not self.validate_data(request.data):
-                return Response({'erreur': 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
-
             woman = request.woman
-            if 'start_date' in request.data:
-                start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d').date()
-            else:
-                if woman.last_period_date:
-                    start_date = woman.last_period_date
-                else:
-                    return Response({'erreur': 'Aucune date de début disponible'}, status=status.HTTP_400_BAD_REQUEST)
+            start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d').date()
+            last_menstruation = woman.menstruations.last()
 
-            end_date = datetime.strptime(request.data['end_date'], '%Y-%m-%d').date()
-            cycle_length = (end_date - start_date).days
+            if last_menstruation:
+                last_menstruation.end_date = start_date
+                last_menstruation.cycle_length = (start_date - last_menstruation.start_date).days
+                last_menstruation.save()
 
+            
             data = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'cycle_length': cycle_length
+                'start_date': start_date
             }
 
             serializer = MenstruationSerializer(data=data)
             if serializer.is_valid():
                 menstruation = serializer.save(woman=woman)
-                woman.last_period_date = end_date
+                woman.last_period_date = start_date
                 woman.save()
                 
                 woman.update_average_cycle_length()
+                
+                predicted_ovulation_date = start_date + timedelta(days=woman.average_cycle_length - 14)
+                fertility_window_start = predicted_ovulation_date - timedelta(days=5)
+                fertility_window_end = predicted_ovulation_date + timedelta(days=1)
+                
+                Ovulation.objects.create(
+                    woman=woman,
+                    predicted_ovulation_date=predicted_ovulation_date,
+                    fertility_window_start=fertility_window_start,
+                    fertility_window_end=fertility_window_end
+                )
+                
                 if woman.notification_preference:
                     Notification.objects.create(
                         woman=woman,
@@ -121,10 +119,11 @@ class MenstruationPredictView(APIView):
             if not last_menstruation:
                 return Response({'detail': 'No menstruation data available for prediction'}, status=status.HTTP_404_NOT_FOUND)
             
-            predicted_start = last_menstruation.end_date + timedelta(days=request.woman.average_cycle_length)
+            predicted_start = last_menstruation.start_date + timedelta(days=request.woman.average_cycle_length)
             return Response({'predicted_start_date': predicted_start}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
         
 class OvulationPredictView(APIView):
     permission_classes = [IsAuthenticatedWoman]

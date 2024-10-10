@@ -19,8 +19,14 @@ class Woman(models.Model):
     def update_average_cycle_length(self):
         menstruations = self.menstruations.all()
         if menstruations.count() > 1:
-            total_cycle_length = sum((m.end_date - m.start_date).days for m in menstruations)
-            self.average_cycle_length = total_cycle_length // menstruations.count()
+            total_cycle_length = 0
+            for m in menstruations:
+                if not m.end_date is None:
+                    total_cycle_length += (m.end_date - m.start_date).days
+            if menstruations.count()-1 == 0:
+                self.average_cycle_length = 28
+            else:
+                self.average_cycle_length = total_cycle_length // (menstruations.count()-1)
             self.save()
     
     class Meta:
@@ -30,8 +36,8 @@ class Menstruation(models.Model):
     id_menstruation = models.AutoField(primary_key=True)
     woman = models.ForeignKey(Woman, on_delete=models.CASCADE, related_name='menstruations')
     start_date = models.DateField()
-    end_date = models.DateField()
-    cycle_length = models.IntegerField()
+    end_date = models.DateField(blank=True, null=True)
+    cycle_length = models.IntegerField(blank=True, null=True)
     
     def __str__(self):
         return f"Cycle from {self.start_date} to {self.end_date} (Duration: {self.cycle_length} days)"
