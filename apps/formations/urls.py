@@ -9,7 +9,9 @@ from apps.formations.views import (
     FormationNewView,
     #FormationPaymentView, 
     FormationSubscription,
-    FormationSessionNewView
+    FormationSessionNewView,
+    FormationSessionFindView,
+    FormationSessionProfileView
 )
 
 urlpatterns = [
@@ -21,4 +23,6 @@ urlpatterns = [
     #path('formations/payments/', FormationPaymentView.as_view(), name='formation-payment'), # POST
     path('formations/subscribe/', FormationSubscription.as_view(), name='formation-subscribe'), # POST
     path('formation/sessions/new/', FormationSessionNewView.as_view(), name='new sessions'), # POST
+    path('formation/session/profile/find/<int:id_formationsession>/', FormationSessionFindView.as_view(), name='formation find '), # GET
+    path('formation/session/profile/<int:id_formationsession>/', FormationSessionProfileView.as_view(), name='session profile'), # DELETE
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

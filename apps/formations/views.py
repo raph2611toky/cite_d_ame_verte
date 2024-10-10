@@ -3,13 +3,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.contrib.auth.models import AnonymousUser
 
 from config.helpers.authentications import UserOrClientAuthentication
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from apps.client.permissions import IsAuthenticatedClient
 from django.utils import timezone
 
-from apps.formations.models import Formation, FormationPayment, FileFormationSession
+from apps.formations.models import Formation, FormationPayment, FileFormationSession, FormationSession
 from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer, ClientFormationSubscriptionSerializer, FormationSessionSerializer
 
 from datetime import timedelta
@@ -39,11 +40,11 @@ class FormationFilterView(APIView):
 
     def get(self, request):
         try:
-            if hasattr(request, 'client'):
-                formations = Formation.objects.filter(participants=request.client.id)
+            if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
+                formations = request.client.formations
                 serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':request.client})
-            elif hasattr(request, 'user'):
-                formations = Formation.objects.filter(organisateurs=request.user.id)
+            elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
+                formations = request.user.formations
                 serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':request.user})
             else:
                 return Response({'erreur': 'Personne non identifié'}, status=status.HTTP_403_FORBIDDEN)
@@ -65,7 +66,6 @@ class FormationProfileFindView(APIView):
             return Response({"error": "Formation not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class FormationProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -105,7 +105,6 @@ class FormationProfileView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Formation.DoesNotExist:
             return Response({"error": "Formation not found"}, status=status.HTTP_404_NOT_FOUND)
-
 
 class FormationNewView(APIView):
     permission_classes = [IsAuthenticated]
@@ -152,7 +151,6 @@ class FormationNewView(APIView):
             print(traceback.format_exc())
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
 class FormationPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -165,7 +163,6 @@ class FormationPaymentView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class FormationSubscription(APIView):
     permission_classes = [IsAuthenticatedClient]
@@ -213,6 +210,31 @@ class FormationSubscription(APIView):
             print(traceback.format_exc())
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+class FormationSessionFindView(APIView):
+    permission_classes = [IsAuthenticatedUserOrClient]
+    authentication_classes = [UserOrClientAuthentication]
+    
+    def get(self, request, id_formationsession):
+        try:
+            if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
+                client = request.client
+                formation_sessions = FormationSession.objects.filter(formation__participants=client.id)
+                formation_session = FormationSession.objects.get(id_formationsession=id_formationsession)
+                if formation_session not in formation_sessions:
+                    return Response({'erreur': 'Vous n\'avez pas l\'autorisation de consulter cette information'}, status=status.HTTP_401_UNAUTHORIZED)
+            elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
+                user = request.user
+                formation_sessions = FormationSession.objects.filter(formation__organisateurs=user.id)
+                formation_session = FormationSession.objects.get(id_formationsession=id_formationsession)
+                if formation_session not in formation_sessions:
+                    return Response({'erreur': 'Vous n\'avez pas l\'autorisation de consulter cette information'}, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                return Response({'erreur': 'Information d\'utilisateur non fournie'}, status=status.HTTP_403_FORBIDDEN)
+            formationsession = FormationSessionSerializer(formation_session).data
+            return Response(formationsession, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 class FormationSessionNewView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -242,5 +264,19 @@ class FormationSessionNewView(APIView):
                 for file in files:
                     FileFormationSession.objects.create(file=file, formation_session=formation_session_save)
                 return Response({'message':'Session successfully added'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class FormationSessionProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, id_formationsession):
+        try:
+            formationsession = FormationSession.objects.get(id_formationsession=id_formationsession)
+            formation_sessions = FormationSession.objects.filter(formation__organisateurs=request.user.id)
+            if formationsession not in formation_sessions:
+                return Response({'erreur':'Vous n\'avez pas l\'autorisation de faire cette action'}, status=status.HTTP_401_UNAUTHORIZED)
+            formationsession.delete()
+            return Response({'message':'formation session a été supprimé avec succès.'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)

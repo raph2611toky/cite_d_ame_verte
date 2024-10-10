@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from apps.sante.models import Woman, Menstruation, Ovulation, Symptom
+from apps.sante.models import Woman, Menstruation, Ovulation, Symptom, Notification
 from apps.sante.serializers import WomanSerializer, MenstruationSerializer, OvulationSerializer, SymptomSerializer
 from apps.sante.permissions import IsAuthenticatedWoman
 
@@ -12,29 +12,39 @@ from datetime import timedelta, datetime
 import traceback
 
 
+class WomanInfoView(APIView):
+    permission_classes = [IsAuthenticatedWoman]
+    authentication_classes = [UserOrClientAuthentication]
+
+    def get(self, request):
+        try:
+            woman = WomanSerializer(request.woman).data
+            return Response(woman, status=status.HTTP_200_OK)
+        except Menstruation.DoesNotExist:
+            return Response({'detail': 'Menstruation records not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 class MenstruationListView(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
 
     def get(self, request):
         try:
-            menstruations = Menstruation.objects.filter(woman=request.woman)
-            serializer = MenstruationSerializer(menstruations, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            woman = WomanSerializer(request.woman, context={'only_menstruations':True}).data
+            return Response(woman, status=status.HTTP_200_OK)
         except Menstruation.DoesNotExist:
             return Response({'detail': 'Menstruation records not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-
 class MenstruationNew(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
 
     def validate_data(self, data):
         try:
-            keys = ['start_date', 'end_date']
-            if any(key not in data.keys() for key in keys):
+            if 'end_date' not in data:
                 return False
             return True
         except Exception:
@@ -45,7 +55,15 @@ class MenstruationNew(APIView):
             if not self.validate_data(request.data):
                 return Response({'erreur': 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
 
-            start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d').date()
+            woman = request.woman
+            if 'start_date' in request.data:
+                start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d').date()
+            else:
+                if woman.last_period_date:
+                    start_date = woman.last_period_date
+                else:
+                    return Response({'erreur': 'Aucune date de début disponible'}, status=status.HTTP_400_BAD_REQUEST)
+
             end_date = datetime.strptime(request.data['end_date'], '%Y-%m-%d').date()
             cycle_length = (end_date - start_date).days
 
@@ -57,14 +75,42 @@ class MenstruationNew(APIView):
 
             serializer = MenstruationSerializer(data=data)
             if serializer.is_valid():
-                serializer.save(woman=request.woman)
+                menstruation = serializer.save(woman=woman)
+                woman.last_period_date = end_date
+                woman.save()
+                
+                woman.update_average_cycle_length()
+                if woman.notification_preference:
+                    Notification.objects.create(
+                        woman=woman,
+                        message=f"Une nouvelle menstruation a été ajoutée pour la période du {menstruation.start_date} au {menstruation.end_date}."
+                    )
+                    
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+class WomanConfigureView(APIView):
+    permission_classes = [IsAuthenticatedWoman]
+    authentication_classes = [UserOrClientAuthentication]
+
+    def post(self, request):
+        try:
+            # request.data = ['notification_preference']
+            preference = request.data.get('notification_preference', None)
+            if preference is None:
+                return Response({'error': 'Le champ notification_preference est requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+            request.woman.notification_preference = preference
+            request.woman.save()
+
+            return Response({'message': 'Préférence de notification mise à jour avec succès'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 class MenstruationPredictView(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
@@ -104,13 +150,27 @@ class OvulationPredictView(APIView):
 class WomanSymptomsNewView(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
+    
+    def validate_data(self, data):
+        try:
+            keys = ['date', 'description']
+            if any(key not in data.keys()for key in keys):
+                return False
+            return True
+        except Exception:
+            return False
 
     def post(self, request):
         try:
-            serializer = SymptomSerializer(data=request.data)
+            # request.data = ['date', 'description']
+            if not self.validate_data(request.data):
+                return Response({'erreur':'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
+            symptom_data = request.data
+            symptom_data['date'] = datetime.strptime(request.data['date'], "%Y-%m-%d").date()
+            serializer = SymptomSerializer(data=symptom_data, context=symptom_data)
             if serializer.is_valid():
                 serializer.save(woman=request.woman)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response({'message':'symptom soumis avec succès'}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

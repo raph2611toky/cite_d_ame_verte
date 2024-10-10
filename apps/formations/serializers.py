@@ -43,7 +43,7 @@ class FileFormationSessionSerializer(serializers.ModelSerializer):
         return f'{settings.BASE_URL}api{obj.file.url}' if obj.file else None
     
 class FormationSessionSerializer(serializers.ModelSerializer):
-    files = FileFormationSessionSerializer(read_only=True)
+    files = FileFormationSessionSerializer(many=True,read_only=True)
     created_at = serializers.SerializerMethodField()
     
     class Meta:
