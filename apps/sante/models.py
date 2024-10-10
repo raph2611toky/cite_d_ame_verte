@@ -16,6 +16,13 @@ class Woman(models.Model):
     def __str__(self):
         return str(self.woman)
     
+    def update_average_cycle_length(self):
+        menstruations = self.menstruations.all()
+        if menstruations.count() > 1:
+            total_cycle_length = sum((m.end_date - m.start_date).days for m in menstruations)
+            self.average_cycle_length = total_cycle_length // menstruations.count()
+            self.save()
+    
     class Meta:
         db_table = 'woman'
         
@@ -56,3 +63,15 @@ class Symptom(models.Model):
     
     class Meta:
         db_table = 'symptom'
+
+class Notification(models.Model):
+    id_notification = models.AutoField(primary_key=True)
+    woman = models.ForeignKey(Woman, on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.message
+
+    class Meta:
+        db_table = 'notification'

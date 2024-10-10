@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.formations.models import Formation, FormationPayment, ClientFormationSubscription, FileFormationSession, FormationSession
 from apps.client.models import Client
+from apps.users.models import User
 from apps.client.serializers import ClientSerializer
 from apps.users.serializers import UserSerializer
 
@@ -47,7 +48,7 @@ class FormationSessionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = FormationSession
-        fields = ['id_formationsession', 'formation', 'description', 'is_online', 'files', 'created_at']
+        fields = ['id_formationsession', 'formation', 'description', 'titre', 'is_online', 'files', 'created_at']
         
     def get_created_at(self, obj):
         return obj.created_at.strftime('%d-%m-%Y')
@@ -66,5 +67,18 @@ class FormationSerializer(serializers.ModelSerializer):
         return obj.created_at.strftime('%d-%m-%Y')
 
     def create(self, validated_data):
-        print(validated_data)
         return super().create(validated_data)
+    
+    def to_representation(self, instance):
+        permit_to_see_sessions = self.context.get('permit_to_see_sessions',None)
+        representation = super().to_representation(instance)
+        if not permit_to_see_sessions is None:
+            if isinstance(permit_to_see_sessions, Client):
+                client = permit_to_see_sessions
+                if client in instance.participants.all():
+                    representation['sessions'] = FormationSessionSerializer(instance.sessions, many=True).data
+            elif isinstance(permit_to_see_sessions, User):
+                user = permit_to_see_sessions
+                if user in instance.organisateurs.all():
+                    representation['sessions'] = FormationSessionSerializer(instance.sessions, many=True).data
+        return representation

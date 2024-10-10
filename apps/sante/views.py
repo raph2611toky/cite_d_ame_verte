@@ -8,7 +8,7 @@ from apps.sante.permissions import IsAuthenticatedWoman
 
 from config.helpers.authentications import UserOrClientAuthentication
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 import traceback
 
 
@@ -26,18 +26,42 @@ class MenstruationListView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+
 class MenstruationNew(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
 
-    def post(self, request):
-        # request.data = ['start_date', 'end_date']
+    def validate_data(self, data):
         try:
-            serializer = MenstruationSerializer(data=request.data)
+            keys = ['start_date', 'end_date']
+            if any(key not in data.keys() for key in keys):
+                return False
+            return True
+        except Exception:
+            return False
+
+    def post(self, request):
+        try:
+            if not self.validate_data(request.data):
+                return Response({'erreur': 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+            start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(request.data['end_date'], '%Y-%m-%d').date()
+            cycle_length = (end_date - start_date).days
+
+            data = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'cycle_length': cycle_length
+            }
+
+            serializer = MenstruationSerializer(data=data)
             if serializer.is_valid():
                 serializer.save(woman=request.woman)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         

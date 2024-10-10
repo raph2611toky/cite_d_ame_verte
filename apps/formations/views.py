@@ -14,6 +14,7 @@ from apps.formations.serializers import FormationSerializer, FormationPaymentSer
 
 from datetime import timedelta
 import traceback
+import json
 
 class FormationListView(APIView):
     authentication_classes = [UserOrClientAuthentication]
@@ -22,11 +23,34 @@ class FormationListView(APIView):
     def get(self, request):
         try:
             formations = Formation.objects.all()
-            serializer = FormationSerializer(formations, many=True)
+            if hasattr(request, 'client'):
+                serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':request.client})
+            elif hasattr(request, 'user'):
+                serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':request.user})
+            else:
+                return Response({'erreur':'Utilisateur non identifié'}, status=status.HTTP_403_FORBIDDEN)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class FormationFilterView(APIView):
+    authentication_classes = [UserOrClientAuthentication]
+    permission_classes = [IsAuthenticatedUserOrClient]
+
+    def get(self, request):
+        try:
+            if hasattr(request, 'client'):
+                formations = Formation.objects.filter(participants=request.client.id)
+                serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':request.client})
+            elif hasattr(request, 'user'):
+                formations = Formation.objects.filter(organisateurs=request.user.id)
+                serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':request.user})
+            else:
+                return Response({'erreur': 'Personne non identifié'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class FormationProfileFindView(APIView):
     authentication_classes = [UserOrClientAuthentication]
@@ -35,7 +59,7 @@ class FormationProfileFindView(APIView):
     def get(self, request, id_formation):
         try:
             formation = Formation.objects.get(id_formation=id_formation)
-            serializer = FormationSerializer(formation)
+            serializer = FormationSerializer(formation, {'permit_to_see_sessions':request.client if request.client.id else request.user})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Formation.DoesNotExist:
             return Response({"error": "Formation not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -115,8 +139,7 @@ class FormationNewView(APIView):
                 if not formation.is_free:
                     payment_data = request.data.get('payment')
                     if payment_data:
-                        print(payment_data)
-                        payment_serializer = FormationPaymentSerializer(data=payment_data)
+                        payment_serializer = FormationPaymentSerializer(data=json.loads(payment_data))
                         if payment_serializer.is_valid():
                             payment_serializer.save(formation=formation, organiser=request.user)
                         else:
@@ -125,6 +148,8 @@ class FormationNewView(APIView):
                 return Response(FormationSerializer(formation).data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(e)
+            print(traceback.format_exc())
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -204,7 +229,7 @@ class FormationSessionNewView(APIView):
     def post(self, request):
         try:
             # request.FILES = ['files']
-            # request.data = ['formation','description']
+            # request.data = ['formation','description', 'is_online'=False]
             if not self.validate_data(request.data):
                 return Response({'erreur': 'Tous les champs sont requist'}, status=status.HTTP_400_BAD_REQUEST)
             files = request.FILES.getlist('files')

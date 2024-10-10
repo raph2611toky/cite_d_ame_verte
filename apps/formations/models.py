@@ -26,6 +26,7 @@ class FormationSession(models.Model):
     description = models.CharField(max_length=100)
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='sessions')
     is_online = models.BooleanField(default=False)
+    titre = models.CharField(default='', max_length=100)
     created_at = models.DateTimeField(default=get_timezone())
     
     def __str__(self):
