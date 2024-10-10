@@ -3,7 +3,16 @@ from apps.users.serializers import UserSerializer
 from apps.client.serializers import ClientSerializer
 from .models import ImageEvenement, FileEvenement, Emplacement, Evenement
 
+from datetime import datetime
 from django.conf import settings
+from django.utils import timezone
+from dotenv import load_dotenv
+
+import pytz
+import os
+
+load_dotenv()
+
 
 class ImageEvenementSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
@@ -58,16 +67,32 @@ class EvenementSerializer(serializers.ModelSerializer):
         ]
         
     def get_created_at(self, obj):
-        return obj.created_at.strftime('%d-%m-%Y')
+        return obj.created_at.strftime('%d-%m-%Y %H:%M:%S')
     
     def get_date_debut(self, obj):
-        return obj.date_debut.strftime('%d-%m-%Y')
+        return obj.date_debut.strftime('%d-%m-%Y %H:%M:%S')
     
     def get_date_fin(self, obj):
-        return obj.date_fin.strftime('%d-%m-%Y')
+        return obj.date_fin.strftime('%d-%m-%Y %H:%M:%S')
     
         
     def validate(self, attrs):
+        print('validate method ....')
         attrs['emplacement'] = self.context.get('evenement_data')['emplacement'][0] if isinstance(self.context.get('evenement_data')['emplacement'], list) else self.context.get('evenement_data')['emplacement']
+        
+        date_debut = self.context.get('evenement_data')['date_debut']
+        date_fin = self.context.get('evenement_data')['date_fin']
+        format = '%Y-%m-%d'
+        if len(date_debut.split()) == 2 and len(date_debut.split()[1].split(':')) == 3:
+            format += ' %H:%M:%S'
+
+        naive_date_debut = datetime.strptime(date_debut, format)
+        naive_date_fin = datetime.strptime(date_fin, format)
+        
+        tz = pytz.timezone(os.getenv("TIMEZONE_AREA"))
+        attrs['date_debut'] = tz.localize(naive_date_debut)
+        attrs['date_fin'] = tz.localize(naive_date_fin)
+
+        print(attrs)
         return attrs
         

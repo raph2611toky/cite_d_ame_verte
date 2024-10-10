@@ -24,6 +24,18 @@ class MarketPlace(models.Model):
     class Meta:
         db_table = 'marketplace'
         
+class AchatProduit(models.Model):
+    id_achat = models.AutoField(primary_key=True)
+    
+    acheteur_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    acheteur_id = models.PositiveIntegerField()
+    acheteur = GenericForeignKey('acheteur_type', 'acheteur_id')
+    
+    created_at = models.DateTimeField(default=get_timezone())
+    
+    class Meta:
+        db_table = 'achat_produit'
+        
 class Produit(models.Model):
     id_produit = models.AutoField(primary_key=True)
     description = models.CharField(max_length=200)
@@ -32,6 +44,8 @@ class Produit(models.Model):
     nombre = models.BigIntegerField(default=1)
     titre = models.CharField(max_length=100)
     marketplace = models.ForeignKey(MarketPlace, on_delete=models.CASCADE, related_name='produits')
+    achateurs = models.ManyToManyField(AchatProduit, related_name='produit')
+    created_at = models.DateTimeField(default=get_timezone())
     
     def __str__(self):
         return self.titre

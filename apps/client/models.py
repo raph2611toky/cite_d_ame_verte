@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 from datetime import timedelta
 from django.utils import timezone as django_timezone
 from django.contrib.contenttypes.models import ContentType
-from apps.marketplace.models import MarketPlace
+from apps.marketplace.models import MarketPlace, AchatProduit
 
 import os
 
@@ -46,6 +46,17 @@ class Client(models.Model):
             defaults={'created_at': get_timezone()}
         )
         return marketplace
+    
+    @property
+    def achats(self):
+        content_type = ContentType.objects.get_for_model(self)
+        return AchatProduit.objects.filter(acheteur_type=content_type, acheteur_id=self.id)
+
+    def new_achat(self, produit):
+        content_type = ContentType.objects.get_for_model(self)
+        achat = AchatProduit.objects.create(acheteur_type=content_type, acheteur_id=self.id)
+        produit.achateurs.add(achat)
+        return achat
 
     def set_password(self, new_password):
         self.password = make_password(new_password)

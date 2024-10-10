@@ -122,7 +122,12 @@ class EvenementNewView(APIView):
             latitude = float(latitude[0]) if isinstance(latitude, list) else float(latitude)
             longitude = float(longitude[0]) if isinstance(longitude, list) else float(longitude)
             name_emplacement = name_emplacement[0] if isinstance(name_emplacement, list) else name_emplacement
-
+            date_debut = request.data['date_debut']
+            if isinstance(date_debut,list):
+                date_debut = date_debut[0]
+            date_fin = request.data['date_fin']
+            if isinstance(date_fin,list):
+                date_fin = date_fin[0]
             emplacement, created = Emplacement.objects.get_or_create(
                 latitude=latitude,
                 longitude=longitude,
@@ -130,7 +135,9 @@ class EvenementNewView(APIView):
             )
 
             evenement_data['emplacement'] = emplacement
-
+            evenement_data['date_debut'] = date_debut
+            evenement_data['date_fin'] = date_fin
+            print(evenement_data)
             evenement_serializer = EvenementSerializer(data=evenement_data, context={'evenement_data': evenement_data})
 
             if evenement_serializer.is_valid():

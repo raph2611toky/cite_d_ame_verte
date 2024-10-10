@@ -4,7 +4,7 @@ from django.db import models
 from dotenv import load_dotenv
 from datetime import timedelta
 from django.contrib.contenttypes.models import ContentType
-from apps.marketplace.models import MarketPlace
+from apps.marketplace.models import MarketPlace, AchatProduit
 
 from apps.users.managers import UserManager
 import os
@@ -66,6 +66,17 @@ class User(AbstractUser):
             defaults={'created_at': get_timezone()}
         )
         return marketplace
+    
+    @property
+    def achats(self):
+        content_type = ContentType.objects.get_for_model(self)
+        return AchatProduit.objects.filter(acheteur_type=content_type, acheteur_id=self.id)
+
+    def new_achat(self, produit):
+        content_type = ContentType.objects.get_for_model(self)
+        achat = AchatProduit.objects.create(acheteur_type=content_type, acheteur_id=self.id)
+        produit.achateurs.add(achat)
+        return achat
 
     def __str__(self):
         if self.first_name and self.last_name:

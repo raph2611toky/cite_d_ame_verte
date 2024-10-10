@@ -99,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'fr-FR'
 
-TIME_ZONE = 'Indian/Antananarivo'
+TIME_ZONE = os.getenv("TIMEZONE_AREA")
 
 USE_I18N = True
 
