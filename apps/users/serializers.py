@@ -90,6 +90,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             contact=validated_data['contact'],
             sexe=validated_data.get('sexe','I')[0].upper(),
+            adress=validated_data.get('adress','Inconu'),
             domaine=validated_data['domaine'],
             profession=validated_data['profession'],
             organisation=validated_data['organisation'],

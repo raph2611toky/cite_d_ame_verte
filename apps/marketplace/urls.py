@@ -1,4 +1,6 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 from apps.marketplace.views import (
     ProduitsListView,
     ProduitFilterView,
@@ -15,4 +17,4 @@ urlpatterns = [
     path('produits/profile/<int:id_produit>/edit/', ProduitProfileView.as_view(), name='produit-profile-edit'), # PUT, DELETE
     path('produits/new/', ProduitNewView.as_view(), name='produit-new'), # POST
     path('produits/achats/new/', ProduitAchatView.as_view(), name='achat_produit'), # POST
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

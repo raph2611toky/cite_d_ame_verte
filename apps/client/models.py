@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.utils import timezone as django_timezone
 from django.contrib.contenttypes.models import ContentType
 from apps.marketplace.models import MarketPlace, AchatProduit
+from apps.sante.models import Woman
 
 import os
 
@@ -57,6 +58,17 @@ class Client(models.Model):
         achat = AchatProduit.objects.create(acheteur_type=content_type, acheteur_id=self.id)
         produit.achateurs.add(achat)
         return achat
+
+    @property
+    def woman(self):
+        if self.sexe == 'F':
+            content_type = ContentType.objects.get_for_model(self)
+            woman, created = Woman.objects.get_or_create(
+                woman_type=content_type,
+                woman_id=self.id
+            )
+            return woman
+        return None
 
     def set_password(self, new_password):
         self.password = make_password(new_password)

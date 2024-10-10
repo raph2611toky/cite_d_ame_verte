@@ -23,6 +23,7 @@ LOCAL_APPS = [
     'apps.evenements.apps.EvenementsConfig',
     'apps.formations.apps.FormationsConfig',
     'apps.marketplace.apps.MarketplaceConfig',
+    'apps.sante.apps.SanteConfig'
 ]
 
 THIRD_PARTY_APPS = [
