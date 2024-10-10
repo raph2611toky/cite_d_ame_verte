@@ -54,7 +54,7 @@ class EvenementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Evenement
         fields = [
-            'id_evenement', 'name_evenement','description','date_debut','date_fin','type', 'organisateurs','participants','created_at','emplacement','images','files'
+            'id_evenement', 'name_evenement','description','date_debut','date_fin','type','nombre_place', 'organisateurs','participants','created_at','emplacement','images','files'
         ]
         
     def get_created_at(self, obj):

@@ -30,6 +30,7 @@ class Evenement(models.Model):
     emplacement = models.ForeignKey(Emplacement, on_delete=models.CASCADE, related_name='evenements')
     organisateurs = models.ManyToManyField(User, related_name='evenements')
     participants = models.ManyToManyField(Client, related_name='evenements')
+    nombre_place = models.BigIntegerField(default=1000)
     created_at = models.DateTimeField(default=get_timezone())
     
     def __str__(self):

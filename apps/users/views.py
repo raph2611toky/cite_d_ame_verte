@@ -66,14 +66,12 @@ class RegisterView(APIView):
                 return False
             return True
         except Exception as e:
-            print(e)
             return False
     
     
     def post(self, request):
         # request.data.keys = ['first_name','last_name','email','password','contact', 'sexe', 'adress', 'domaine', 'profession', 'organisation']
         try:
-            print(request.data)
             if not self.validate_data(request.data):
                 return Response({'erreur':'Tous les attributs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
             if self.check_if_user_exist(request.data['email']):

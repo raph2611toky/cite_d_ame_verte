@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.hashers import make_password
 from datetime import timedelta
 from django.utils import timezone as django_timezone
+from django.contrib.contenttypes.models import ContentType
+from apps.marketplace.models import MarketPlace
 
 import os
 
@@ -33,7 +35,17 @@ class Client(models.Model):
     
     @property
     def is_authenticated(self):
-        return True 
+        return True
+    
+    @property
+    def marketplace(self):
+        content_type = ContentType.objects.get_for_model(self)
+        marketplace, created = MarketPlace.objects.get_or_create(
+            vendeur_type=content_type,
+            vendeur_id=self.id,
+            defaults={'created_at': get_timezone()}
+        )
+        return marketplace
 
     def set_password(self, new_password):
         self.password = make_password(new_password)

@@ -9,6 +9,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 from apps.evenements.models import Evenement, Emplacement, ImageEvenement, FileEvenement
 from apps.evenements.serializers import EvenementSerializer
+from  apps.client.models import Client
+from apps.client.permissions import IsAuthenticatedClient
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from config.helpers.authentications import UserOrClientAuthentication
 
@@ -17,7 +19,7 @@ import traceback
 class EvenementListView(APIView):
     # authentication_classes = [UserOrClientAuthentication]
     # permission_classes = [IsAuthenticatedUserOrClient]
-# 
+
     def get(self, request):
         try:
             evenements = Evenement.objects.all()
@@ -151,3 +153,34 @@ class EvenementNewView(APIView):
         except Exception as e:
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class EvenementSubscription(APIView):
+    permission_classes = [IsAuthenticatedClient]
+    authentication_classes = []
+    
+    def validate_data(self, data):
+        try:
+            keys = ['evenement']
+            if any(key not in data.keys()for key in keys):
+                return False
+            return Evenement.objects.filter(id_evenement=data['evenement']).exists()
+        except Exception :
+            return False
+    
+    def post(self, request):
+        try:
+            # request.data = ['evenement']
+            if not self.validate_data(request.data):
+                return Response({'erreur', 'Veuillez verifier les informations fournis'}, status=status.HTTP_404_NOT_FOUND)
+            evenement = Evenement.objects.get(id_evenement=request.data['evenement'])
+            client = request.client
+            place_disponible = evenement.nombre_place - evenement.participants.count()
+            if client not in evenement.participants.all():
+                if place_disponible < 1:
+                    return Response({'erreur': 'Plus de place disponible'}, status=status.HTTP_401_UNAUTHORIZED)
+                evenement.participants.add(client)
+            else:
+                evenement.participants.remove(client)
+            evenement.save()
+            return Response({'message':'Reservation reussi'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)

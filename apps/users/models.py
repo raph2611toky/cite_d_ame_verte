@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from dotenv import load_dotenv
 from datetime import timedelta
+from django.contrib.contenttypes.models import ContentType
+from apps.marketplace.models import MarketPlace
 
 from apps.users.managers import UserManager
 import os
@@ -54,6 +56,16 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+    
+    @property
+    def marketplace(self):
+        content_type = ContentType.objects.get_for_model(self)
+        marketplace, created = MarketPlace.objects.get_or_create(
+            vendeur_type=content_type,
+            vendeur_id=self.id,
+            defaults={'created_at': get_timezone()}
+        )
+        return marketplace
 
     def __str__(self):
         if self.first_name and self.last_name:
