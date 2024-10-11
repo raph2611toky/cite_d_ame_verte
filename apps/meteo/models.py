@@ -1,6 +1,7 @@
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
-# Modèle de localisation pour représenter les villes et coordonnées associées
 class Location(models.Model):
     id_location = models.AutoField(primary_key=True)
     ville = models.CharField(max_length=100)
@@ -30,7 +31,6 @@ class Meteo(models.Model):
         db_table = 'meteo'
 
 
-# Modèle générique pour les catastrophes
 class Catastrophe(models.Model):
     titre = models.CharField(max_length=255)
     description = models.TextField()
@@ -83,6 +83,66 @@ class Secheresse(Catastrophe):
     
     class Meta:
         db_table = 'secheresse'
+        
+# Modèle pour les tremblements de terre
+class TremblementDeTerre(Catastrophe):
+    id_seisme = models.AutoField(primary_key=True)
+    magnitude = models.FloatField()
+    profondeur = models.FloatField()  # en km
+    epicentre_latitude = models.FloatField()
+    epicentre_longitude = models.FloatField()
+
+    def __str__(self):
+        return f"Tremblement de terre: {self.titre} ({self.magnitude}M)"
+
+    class Meta:
+        db_table = 'tremblement_de_terre'
+
+
+# Modèle pour les tsunamis
+class Tsunami(Catastrophe):
+    id_tsunami = models.AutoField(primary_key=True)
+    hauteur_max_vagues = models.FloatField()  # Hauteur maximale des vagues en mètres
+    distance_parcourue = models.FloatField()  # Distance parcourue en km
+
+    def __str__(self):
+        return f"Tsunami: {self.titre} (Hauteur: {self.hauteur_max_vagues}m)"
+    
+    class Meta:
+        db_table = 'tsunami'
+
+
+class Degats(models.Model):
+    id_degats = models.AutoField(primary_key=True)
+
+    # Champs pour relier de manière polymorphique à n'importe quelle catastrophe
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    catastrophe_object = GenericForeignKey('content_type', 'object_id')
+
+    pertes_humaines = models.IntegerField(null=True, blank=True)  # Nombre de morts
+    cout_estime = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)  # Coût estimé en millions de $
+    infrastructures_detruites = models.TextField(null=True, blank=True)  # Liste ou description des infrastructures touchées
+    
+    def __str__(self):
+        return f"Dégâts pour {self.catastrophe_object}"
+
+    class Meta:
+        db_table = 'degats'
+
+
+class SourceDonnees(models.Model):
+    id_source = models.AutoField(primary_key=True)
+    nom_source = models.CharField(max_length=255)
+    url_source = models.URLField()
+    date_ajout = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Source: {self.nom_source}"
+
+    class Meta:
+        db_table = 'source_donnees'
+
 
 
 class AutreCatastrophe(Catastrophe):

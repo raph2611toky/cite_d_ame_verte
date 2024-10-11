@@ -1,7 +1,11 @@
 from rest_framework.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.users.views import ProfileView, LogoutView, LoginView, RegisterView, AccountModeListView, ConfigureAccountMode
+from apps.users.views import (
+        ProfileView, LogoutView, LoginView, RegisterView, AccountModeListView, ConfigureAccountMode,
+        UserDepotView,UserDepotVerification, PaymentVerificationStatusUserView, 
+        UserDepositVoucherUserView,
+    )
 
 app_name = 'users'
 
@@ -12,4 +16,8 @@ urlpatterns = [
     path('users/logout/', LogoutView.as_view(), name='logout'), # PUT
     path('accountsmode/list/', AccountModeListView.as_view(), name='accounts_mode'), # GET
     path('users/configure/account_mode/', ConfigureAccountMode.as_view(), name='configure_account_mode'), # POST
+    path('client/depots/', UserDepotView.as_view(), name='client_depot'),#GET
+    path('client/depositvoucher/', UserDepositVoucherUserView.as_view(), name='client_depositvoucher'),#GET
+    path('client/payement/verification/mobile/', UserDepotVerification.as_view(), name='payment_verification'),# POST,
+    path("client/payement/status/", PaymentVerificationStatusUserView.as_view(), name="payement_status"), #GET
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

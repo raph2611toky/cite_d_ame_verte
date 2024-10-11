@@ -6,7 +6,11 @@ from django.contrib.contenttypes.models import ContentType
 from apps.marketplace.models import MarketPlace, AchatProduit
 from apps.sante.models import Woman
 
+from decimal import Decimal
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 def get_timezone():
     tz = os.getenv("TIMEZONE_HOURS")
@@ -56,8 +60,23 @@ class Client(models.Model):
     def new_achat(self, produit):
         content_type = ContentType.objects.get_for_model(self)
         achat = AchatProduit.objects.create(acheteur_type=content_type, acheteur_id=self.id)
+        WITH_PAYMENT_MONEY = bool(os.getenv("WITH_PAYMENT_MONEY"))
+        if WITH_PAYMENT_MONEY:
+            self.soustract_voucher(produit.price)
+            vendeur = produit.marketplace.vendeur
+            vendeur.add_voucher(produit.price)
         produit.achateurs.add(achat)
         return achat
+    
+    def add_voucher(self, solde):
+        client_voucher = self.vouchers
+        client_voucher += Decimal(solde)
+        client_voucher.save()
+        
+    def soustract_voucher(self, solde):
+        client_voucher = self.vouchers
+        client_voucher -= Decimal(solde)
+        client_voucher.save()
 
     @property
     def woman(self):
@@ -93,3 +112,81 @@ class ClientOutstandingToken(models.Model):
     
     class Meta:
         db_table = 'clientoutstandingtoken'
+        
+#####################################################
+#                PAIR TOKEN MOBILE                  #
+#####################################################
+
+class TokenPairMobileAuthentication(models.Model):
+    token_access = models.TextField(blank=False,null=False)
+    token_refresh = models.TextField(blank=False,null=False)
+    created_at = models.DateTimeField(default=get_timezone())
+    modify_at = models.DateTimeField(default=get_timezone())
+    
+    class Meta:
+        db_table = 'tokenpairmobileauthentication'
+        
+#####################################################
+#                 PAYEMENT MOBILE                   #
+#####################################################
+
+class PayementTemplateClient(models.Model):
+    STATUS_CHOICES = [
+        ('P', 'Pending'),
+        ('S', 'Success'),
+        ('F', 'Failed')
+    ]
+    
+    PAYEMENT_MODES = (
+        ('M','Mvola'),
+        ('A', 'Airtel Money'),
+        ('O', 'Orange Money')
+    )
+    
+    numero_source = models.CharField(max_length=15)
+    reference = models.CharField(max_length=100)
+    date_payement = models.DateField()
+    mode_payement = models.CharField(max_length=1, choices=PAYEMENT_MODES, default='P')
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='P')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.reference
+    
+    class Meta:
+        abstract = True
+
+class DepotClient(PayementTemplateClient):
+    CURRENCY = (
+        ('MGA', 'Ariary'),
+    )
+    
+    id_depot = models.AutoField(primary_key=True)
+    solde = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, choices=CURRENCY, default='MGA')
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='depots')
+    
+    class Meta: 
+        db_table = 'depotclient'
+
+class DepositVoucherClient(models.Model):
+    id_depositvoucher = models.AutoField(primary_key=True)
+    client = models.OneToOneField(Client, on_delete=models.CASCADE, related_name='vouchers')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(default=get_timezone())
+
+    def __str__(self):
+        return f"Voucher {self.id} - {self.client} - {self.amount}"
+
+    class Meta:
+        db_table = 'depositvoucherclient'
+
+class QueuePaymentVerificationClient(PayementTemplateClient):
+    id_queuepayement = models.AutoField(primary_key=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='queues')
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'queuepayementverificationclient'

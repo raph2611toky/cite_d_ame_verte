@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 from datetime import timedelta
 import os
+import re
 import jwt
 
 load_dotenv()
@@ -66,3 +67,26 @@ def get_token_from_request(request: Request) -> str:
     if authorization_header and authorization_header.startswith('Bearer '):
         return authorization_header.split()[1]
     return None
+
+def extract_solde(body):
+    if '1/2' in body:
+        body = body.replace('1/2','')
+    solde_pattern = r'(?<!\d[\d/])(\d{1,3}(?:[ \d]{0,12})?)\s*Ar'
+    solde_match = re.search(solde_pattern, body)
+
+    if solde_match:
+        solde_str = solde_match.group()
+        print(solde_str)
+        if 'ar' not in solde_str.lower():
+            return None
+        if ' Ar'in solde_str:
+            parts = solde_str.split()
+
+            solde = ''.join(parts[:-1])
+            currency = parts[-1]
+        else:
+            solde = solde_str.replace("Ar", "")
+            currency = solde_str[-2:]
+        return solde, currency
+    else:
+        return None

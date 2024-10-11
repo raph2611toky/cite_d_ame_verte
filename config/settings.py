@@ -234,5 +234,9 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 SITE_NAME = "cité d'âme verte"
 
 CRONJOBS = [
-    ('*/2 * * * *', 'config.helpers.catastrophes_mg.collect_catastrophes_data', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
+    ('*/2 * * * *', 'config.tasks.catastrophes_mg.collect_catastrophes_data', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
+    ('0 0 * * *', 'config.tasks.token_mobile_manager.login_all_nigth', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
+    ('*/10 * * * *', 'config.tasks.token_mobile_manager.refresh_token_all_ten_minutes', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
+    ('*/1 * * * *', 'config.tasks.queue_payment_manager_for_client.process_payment_queue', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
+    ('*/1 * * * *', 'config.tasks.queue_payment_manager_for_user.process_payment_queue', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
 ]

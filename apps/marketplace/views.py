@@ -150,20 +150,41 @@ class ProduitNewView(APIView):
 class ProduitAchatView(APIView):
     permission_classes = [IsAuthenticatedUserOrClient]
     authentication_classes = [UserOrClientAuthentication]
+    
+    def validate_data(self, data):
+        try:
+            keys = ['produit']
+            if any(key not in data.keys()for key in keys):return False
+            return data['produit'].isnumeric and Produit.objects.filter(id_produit=int(data['produit'])).exists()
+        except Exception:
+            return False
 
     def post(self, request):
         try:
             # request.data = ['produit']
+            WITH_PAYMENT_MONEY = bool(os.getenv("WITH_PAYMENT_MONEY"))
+            if not self.validate_data(request.data):
+                return Response({'erreur':'Veuillez verifier les informations fournies'}, status=status.HTTP_400_BAD_REQUEST)
             produit_id = request.data.get('produit')
             produit = get_object_or_404(Produit, id_produit=produit_id)
             if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
                 client = request.client
+                if client == produit.marketplace.vendeur:
+                    return Response({'erreur':'Vous ne pouvez pas acheter vos produits'}, status=status.HTTP_401_UNAUTHORIZED)
+                if WITH_PAYMENT_MONEY:
+                    if client.vouchers.amount < produit.price:
+                        return Response({'erreur':'Votre solde est insuffisant pour cette opération'}, status=status.HTTP_400_BAD_REQUEST)
                 achat = client.new_achat(produit)
                 MARKET_BUYING_NOTE = int(os.getenv('MARKET_BUYING_NOTE'))
                 client.credit_vert += MARKET_BUYING_NOTE
                 client.save()
-            elif hasattr(request, 'user'):
+            elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
                 user = request.user
+                if user == produit.marketplace.vendeur:
+                    return Response({'erreur':'Vous ne pouvez pas acheter vos produits'}, status=status.HTTP_401_UNAUTHORIZED)
+                if WITH_PAYMENT_MONEY:
+                    if user.vouchers.amount < produit.price:
+                        return Response({'erreur':'Votre solde est insuffisant pour cette opération'}, status=status.HTTP_400_BAD_REQUEST)
                 achat = user.new_achat(produit)
                 user.credit_vert += MARKET_BUYING_NOTE
                 user.save()

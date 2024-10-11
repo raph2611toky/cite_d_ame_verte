@@ -1,18 +1,13 @@
 from rest_framework import serializers
-from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import PasswordField
 from django.contrib.auth.hashers import check_password, make_password
-from datetime import datetime, timedelta
-from django.utils import timezone
-from uuid import uuid4
 
-from config.helpers.helper import is_token_blacklisted, get_timezone
+from config.helpers.helper import get_timezone
 from apps.client.tokens import ClientRefreshToken
-from apps.client.models import Client
-
+from apps.client.models import Client, DepositVoucherClient, DepotClient, QueuePaymentVerificationClient
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -102,3 +97,41 @@ class RegisterClientSerializer(serializers.ModelSerializer):
             'email': client_data['email']
         }
         return data
+    
+class QueuePaymentVerificationClientSerializer(serializers.ModelSerializer):
+    modified_at = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = QueuePaymentVerificationClient
+        fields = ["id_queuepayement", "client",'numero_source', 'reference', 'date_payement', 'mode_payement', 'status', "created_at", "modified_at"]
+        
+    def get_created_at(self, obj):
+        return obj.created_at.strftime("%d-%m-%Y, %H:%M:%S")
+    
+    def get_modified_at(self, obj):
+        return obj.created_at.strftime("%d-%m-%Y, %H:%M:%S")
+
+class DepotClientSerializer(serializers.ModelSerializer):
+    created_at = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = DepotClient
+        fields = ['id_depot', 'client', 'numero_source', 'reference', 'date_payement', 'mode_payement', 'solde', 'currency', 'status', 'created_at']
+        
+    def get_created_at(self, obj):
+        return obj.created_at.strftime("%d-%m-%Y, %H:%M:%S")
+
+class DepositVoucherClientSerializer(serializers.ModelSerializer):
+    date_created = serializers.SerializerMethodField()
+    modified_at = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = DepositVoucherClient
+        fields = ['id_depositvoucher', 'client', 'amount', 'date_created', 'is_active', 'modified_at']
+        
+    def get_date_created(self, obj):
+        return obj.date_created.strftime("%d-%m-%Y")
+    
+    def get_modified_at(self, obj):
+        return obj.modified_at.strftime("%d-%m-%Y")

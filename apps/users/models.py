@@ -9,6 +9,7 @@ from apps.sante.models import Woman
 
 from apps.users.managers import UserManager
 import os
+from decimal import Decimal
 
 load_dotenv()
 
@@ -65,7 +66,7 @@ class User(AbstractUser):
         marketplace, created = MarketPlace.objects.get_or_create(
             vendeur_type=content_type,
             vendeur_id=self.id,
-            defaults={'created_at': get_timezone()}
+            defaults={'created_at': default_created_at()}
         )
         return marketplace
     
@@ -77,8 +78,23 @@ class User(AbstractUser):
     def new_achat(self, produit):
         content_type = ContentType.objects.get_for_model(self)
         achat = AchatProduit.objects.create(acheteur_type=content_type, acheteur_id=self.id)
+        WITH_PAYMENT_MONEY = bool(os.getenv("WITH_PAYMENT_MONEY"))
+        if WITH_PAYMENT_MONEY:
+            self.soustract_voucher(produit.price)
+            vendeur = produit.marketplace.vendeur
+            vendeur.add_voucher(produit.price)
         produit.achateurs.add(achat)
         return achat
+    
+    def add_voucher(self, solde):
+        user_voucher = self.vouchers
+        user_voucher += Decimal(solde)
+        user_voucher.save()
+        
+    def soustract_voucher(self, solde):
+        user_voucher = self.vouchers
+        user_voucher -= Decimal(solde)
+        user_voucher.save()
 
     @property
     def woman(self):
@@ -116,3 +132,68 @@ class UserSubscription(models.Model):
 
     class Meta:
         db_table = 'user_subscriptions'
+        
+#####################################################
+#                 PAYEMENT MOBILE                   #
+#####################################################
+
+class PayementTemplateUser(models.Model):
+    STATUS_CHOICES = [
+        ('P', 'Pending'),
+        ('S', 'Success'),
+        ('F', 'Failed')
+    ]
+    
+    PAYEMENT_MODES = (
+        ('M','Mvola'),
+        ('A', 'Airtel Money'),
+        ('O', 'Orange Money')
+    )
+    
+    numero_source = models.CharField(max_length=15)
+    reference = models.CharField(max_length=100)
+    date_payement = models.DateField()
+    mode_payement = models.CharField(max_length=1, choices=PAYEMENT_MODES, default='P')
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='P')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.reference
+    
+    class Meta:
+        abstract = True
+
+class DepotUser(PayementTemplateUser):
+    CURRENCY = (
+        ('MGA', 'Ariary'),
+    )
+    
+    id_depot = models.AutoField(primary_key=True)
+    solde = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, choices=CURRENCY, default='MGA')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='depots')
+    
+    class Meta: 
+        db_table = 'depotuser'
+
+class DepositVoucherUser(models.Model):
+    id_depositvoucher = models.AutoField(primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='vouchers')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(default=default_created_at())
+
+    def __str__(self):
+        return f"Voucher {self.id} - {self.user} - {self.amount}"
+
+    class Meta:
+        db_table = 'depositvoucheruser'
+
+class QueuePaymentVerificationUser(PayementTemplateUser):
+    id_queuepayement = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='queues')
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'queuepayementverificationuser'

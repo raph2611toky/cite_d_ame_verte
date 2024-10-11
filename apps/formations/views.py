@@ -8,6 +8,7 @@ from django.contrib.auth.models import AnonymousUser
 from config.helpers.authentications import UserOrClientAuthentication
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from apps.client.permissions import IsAuthenticatedClient
+from apps.client.models import Client
 from django.utils import timezone
 
 from apps.formations.models import Formation, FormationPayment, FileFormationSession, FormationSession
@@ -126,7 +127,7 @@ class FormationNewView(APIView):
                 payment_keys = ['price', 'validity_days']
                 if any(key not in data['payment'].keys()for key in payment_keys):
                     return False
-            return True
+            return data['payment']['price'] > 0
         except Exception as e:
             return False
 
@@ -178,6 +179,20 @@ class FormationSubscription(APIView):
     permission_classes = [IsAuthenticatedClient]
     authentication_classes = []
     
+    def validate_payment_mobile(self,formation:Formation, client:Client):
+        try:
+            if formation.is_free:
+                return True
+            formation_payments = formation.payments.all()
+            if formation_payments.count() < 1:
+                return False
+            formation_payment = formation_payments.last()
+            if formation_payment.price > client.vouchers.amount:
+                return False
+            return True
+        except Exception:
+            return False
+    
     def validate_data(self, data):
         try:
             keys = ['formation']
@@ -190,6 +205,7 @@ class FormationSubscription(APIView):
     def post(self, request):
         # request.data = ['fomation']
         try:
+            WITH_PAYMENT_MONEY = bool(os.getenv("WITH_PAYMENT_MONEY"))
             if not self.validate_data(request.data):
                 return Response({'erreur', 'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
             client = request.client
@@ -199,6 +215,9 @@ class FormationSubscription(APIView):
             formation = Formation.objects.get(id_formation=formation_id)
             formation_payment = formation.payments.all()
             FORMATION_NOTE = int(os.getenv('FORMATION_NOTE'))
+            if WITH_PAYMENT_MONEY:
+                if not self.validate_payment_mobile(formation, client):
+                    return Response({'erreur':'Votre solde n\'est pas suffisant pour cette opération'}, status=status.HTTP_400_BAD_REQUEST)
             if formation_payment.count() < 1 and not formation.is_free:
                 return Response({'erreur': 'Formation has no payments.'}, status=status.HTTP_400_BAD_REQUEST)
             elif not formation.is_free:
@@ -217,6 +236,11 @@ class FormationSubscription(APIView):
                     if not client in formation.participants.all():
                         client.credit_vert += FORMATION_NOTE
                         client.save()
+                        if WITH_PAYMENT_MONEY:
+                            formation_price = formation_payment.price
+                            client.soustract_voucher(formation_price)
+                            user = formation.organisateurs.all().first()
+                            user.add_voucher(formation_price)
                     formation.participants.add(request.client)
                     formation.save()
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
