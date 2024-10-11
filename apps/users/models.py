@@ -46,6 +46,7 @@ class User(AbstractUser):
     adress = models.CharField(max_length=100, default='Inconu')
     contact = models.CharField(max_length=20, null=False)
     sexe = models.CharField(max_length=20, choices=SEXE, default='I')
+    credit_vert = models.BigIntegerField(default=0)
     domaine = models.CharField(max_length=50)
     profession = models.CharField(max_length=50)
     organisation = models.CharField(max_length=100)

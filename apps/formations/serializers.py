@@ -54,9 +54,9 @@ class FormationSessionSerializer(serializers.ModelSerializer):
         return obj.created_at.strftime('%d-%m-%Y')
 
 class FormationSerializer(serializers.ModelSerializer):
-    payments = FormationPaymentSerializer(read_only=True)
-    participants = UserSerializer(many=True, read_only=True)
-    organisateurs = ClientSerializer(many=True, read_only=True)
+    payments = serializers.SerializerMethodField()
+    participants = ClientSerializer(many=True, read_only=True)
+    organisateurs = UserSerializer(many=True, read_only=True)
     created_at = serializers.SerializerMethodField()
 
     class Meta:
@@ -65,20 +65,23 @@ class FormationSerializer(serializers.ModelSerializer):
 
     def get_created_at(self, obj):
         return obj.created_at.strftime('%d-%m-%Y')
+    
+    def get_payments(self, obj):
+        return FormationPaymentSerializer(obj.payments.first()).data
 
     def create(self, validated_data):
         return super().create(validated_data)
     
     def to_representation(self, instance):
-        permit_to_see_sessions = self.context.get('permit_to_see_sessions',None)
+        permit_to_see_sessions = self.context.get('permit_to_see_sessions',False)
         representation = super().to_representation(instance)
-        if not permit_to_see_sessions is None:
-            if isinstance(permit_to_see_sessions, Client):
-                client = permit_to_see_sessions
+        if permit_to_see_sessions:
+            if not self.context.get('client', None) is None:
+                client = self.context.get('client')
                 if client in instance.participants.all():
                     representation['sessions'] = FormationSessionSerializer(instance.sessions, many=True).data
-            elif isinstance(permit_to_see_sessions, User):
-                user = permit_to_see_sessions
+            elif not self.context.get('user', None) is None:
+                user = self.context.get('user')
                 if user in instance.organisateurs.all():
                     representation['sessions'] = FormationSessionSerializer(instance.sessions, many=True).data
         return representation

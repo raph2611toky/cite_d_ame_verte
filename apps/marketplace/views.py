@@ -1,9 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from rest_framework.generics import RetrieveAPIView
+from django.contrib.auth.models import AnonymousUser
 
 from apps.marketplace.models import Produit, MarketPlace
 from apps.marketplace.serializers import ProduitSerializer, AchatProduitSerializer
@@ -11,7 +10,11 @@ from apps.marketplace.serializers import ProduitSerializer, AchatProduitSerializ
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from config.helpers.authentications import UserOrClientAuthentication
 
+from dotenv import load_dotenv
 import traceback
+import os
+
+load_dotenv()
 
 class ProduitsListView(APIView):
     permission_classes = [IsAuthenticatedUserOrClient]
@@ -121,14 +124,24 @@ class ProduitNewView(APIView):
             if not self.validate_data(request.data):
                 return Response({'erreur':'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
             produit_data = request.data
-            if hasattr(request, 'client'):
+            IS_CLIENT = False
+            if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
                 marketplace = request.client.marketplace
+                IS_CLIENT = True
             else:
                 marketplace = request.user.marketplace
             produit_data['marketplace'] = marketplace.id_marketplace
             serializer = ProduitSerializer(data=produit_data)
             if serializer.is_valid():
                 serializer.save()
+                MARKET_SELLING_NOTE = int(os.getenv('MARKET_SELLING_NOTE'))
+                if IS_CLIENT:
+                    client = request.client 
+                    client.credit_vert += MARKET_SELLING_NOTE
+                    client.save()
+                else:
+                    request.user.credit_vert += MARKET_SELLING_NOTE
+                    request.user.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -143,13 +156,17 @@ class ProduitAchatView(APIView):
             # request.data = ['produit']
             produit_id = request.data.get('produit')
             produit = get_object_or_404(Produit, id_produit=produit_id)
-
-            if hasattr(request, 'client'):
+            if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
                 client = request.client
                 achat = client.new_achat(produit)
+                MARKET_BUYING_NOTE = int(os.getenv('MARKET_BUYING_NOTE'))
+                client.credit_vert += MARKET_BUYING_NOTE
+                client.save()
             elif hasattr(request, 'user'):
                 user = request.user
                 achat = user.new_achat(produit)
+                user.credit_vert += MARKET_BUYING_NOTE
+                user.save()
             else:
                 return Response({'erreur': 'Acheteur non identifié'}, status=status.HTTP_400_BAD_REQUEST)
 

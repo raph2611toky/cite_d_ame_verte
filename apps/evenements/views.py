@@ -14,7 +14,10 @@ from apps.client.permissions import IsAuthenticatedClient
 from config.helpers.permissions import IsAuthenticatedUserOrClient
 from config.helpers.authentications import UserOrClientAuthentication
 
+from dotenv import load_dotenv
+
 import traceback
+import os
 
 class EvenementListView(APIView):
     # authentication_classes = [UserOrClientAuthentication]
@@ -88,8 +91,12 @@ class EvenementProfileView(APIView):
 
     def delete(self, request, pk):
         try:
+            user = request.user
             evenement = get_object_or_404(Evenement, pk=pk)
             evenement.delete()
+            EVENEMENT_NOTE = int(os.getenv('EVENEMENT_NOTE'))
+            user.credit_vert -= EVENEMENT_NOTE
+            user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -141,9 +148,10 @@ class EvenementNewView(APIView):
             evenement_serializer = EvenementSerializer(data=evenement_data, context={'evenement_data': evenement_data})
 
             if evenement_serializer.is_valid():
+                user = request.user
                 evenement_save = evenement_serializer.save()
                 evenement = Evenement.objects.get(id_evenement=evenement_save.id_evenement)
-                evenement.organisateurs.add(request.user.id)
+                evenement.organisateurs.add(user.id)
                 evenement.save()
 
                 for image in images:
@@ -151,6 +159,10 @@ class EvenementNewView(APIView):
 
                 for file in files:
                     FileEvenement.objects.create(file=file, evenement=evenement)
+                    
+                EVENEMENT_NOTE = int(os.getenv('EVENEMENT_NOTE'))
+                user.credit_vert += EVENEMENT_NOTE
+                user.save()
 
                 return Response(evenement_serializer.data, status=status.HTTP_201_CREATED)
             else:
@@ -181,12 +193,17 @@ class EvenementSubscription(APIView):
             evenement = Evenement.objects.get(id_evenement=request.data['evenement'])
             client = request.client
             place_disponible = evenement.nombre_place - evenement.participants.count()
+            EVENEMENT_NOTE = int(os.getenv('EVENEMENT_NOTE'))
             if client not in evenement.participants.all():
                 if place_disponible < 1:
                     return Response({'erreur': 'Plus de place disponible'}, status=status.HTTP_401_UNAUTHORIZED)
                 evenement.participants.add(client)
+                client.credit_vert += EVENEMENT_NOTE
+                client.save()
             else:
                 evenement.participants.remove(client)
+                client.credit_vert -= EVENEMENT_NOTE
+                client.save()
             evenement.save()
             return Response({'message':'Reservation reussi'}, status=status.HTTP_200_OK)
         except Exception as e:

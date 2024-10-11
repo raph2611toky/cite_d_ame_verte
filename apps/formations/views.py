@@ -13,9 +13,13 @@ from django.utils import timezone
 from apps.formations.models import Formation, FormationPayment, FileFormationSession, FormationSession
 from apps.formations.serializers import FormationSerializer, FormationPaymentSerializer, ClientFormationSubscriptionSerializer, FormationSessionSerializer
 
+from dotenv import load_dotenv
 from datetime import timedelta
 import traceback
+import os
 import json
+
+load_dotenv()
 
 class FormationListView(APIView):
     authentication_classes = [UserOrClientAuthentication]
@@ -24,14 +28,16 @@ class FormationListView(APIView):
     def get(self, request):
         try:
             formations = Formation.objects.all()
-            if hasattr(request, 'client'):
-                serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':request.client})
-            elif hasattr(request, 'user'):
-                serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':request.user})
+            if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
+                serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':True, 'client':request.client})
+            elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
+                serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':True, 'user': request.user})
             else:
                 return Response({'erreur':'Utilisateur non identifié'}, status=status.HTTP_403_FORBIDDEN)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
+            print(e)
+            print(traceback.format_exc())
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class FormationFilterView(APIView):
@@ -42,10 +48,10 @@ class FormationFilterView(APIView):
         try:
             if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
                 formations = request.client.formations
-                serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':request.client})
+                serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':True, 'client':request.client})
             elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
                 formations = request.user.formations
-                serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':request.user})
+                serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':True,'user':request.user})
             else:
                 return Response({'erreur': 'Personne non identifié'}, status=status.HTTP_403_FORBIDDEN)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -60,7 +66,7 @@ class FormationProfileFindView(APIView):
     def get(self, request, id_formation):
         try:
             formation = Formation.objects.get(id_formation=id_formation)
-            serializer = FormationSerializer(formation, {'permit_to_see_sessions':request.client if request.client.id else request.user})
+            serializer = FormationSerializer(formation, {'permit_to_see_sessions':True,'client':request.client if request.client.id else request.user})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Formation.DoesNotExist:
             return Response({"error": "Formation not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -132,17 +138,21 @@ class FormationNewView(APIView):
                 return Response({'erreur':'tous les attributs sont requis.'}, status=status.HTTP_400_BAD_REQUEST)
             serializer = FormationSerializer(data=request.data)
             if serializer.is_valid():
+                user = request.user
                 formation_save = serializer.save()
                 formation = Formation.objects.get(id_formation=formation_save.id_formation)
-                formation.organisateurs.add(request.user.id)
+                formation.organisateurs.add(user.id)
                 if not formation.is_free:
                     payment_data = request.data.get('payment')
                     if payment_data:
                         payment_serializer = FormationPaymentSerializer(data=json.loads(payment_data))
                         if payment_serializer.is_valid():
-                            payment_serializer.save(formation=formation, organiser=request.user)
+                            payment_serializer.save(formation=formation, organiser=user)
                         else:
                             return Response(payment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                FORMATION_NOTE = int(os.getenv('FORMATION_NOTE'))
+                user.credit_vert += FORMATION_NOTE
+                user.save()
                 formation.save()
                 return Response(FormationSerializer(formation).data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -187,25 +197,37 @@ class FormationSubscription(APIView):
             if not formation_id:
                 return Response({"error": "Formation payment ID is required."}, status=status.HTTP_400_BAD_REQUEST)
             formation = Formation.objects.get(id_formation=formation_id)
-            formation_payment = formation.payments
-            if formation_payment is None:
+            formation_payment = formation.payments.all()
+            FORMATION_NOTE = int(os.getenv('FORMATION_NOTE'))
+            if formation_payment.count() < 1 and not formation.is_free:
                 return Response({'erreur': 'Formation has no payments.'}, status=status.HTTP_400_BAD_REQUEST)
-            start_date = timezone.now()
-            end_date = timezone.now() + timedelta(days=formation_payment.validity_days)
-            subscription_data = {
-                'client': client.id,
-                'formation_payment': formation_payment,
-                'start_date': start_date,#.strftime('%Y-%m-%d'),
-                'end_date': end_date,#.strftime('%Y-%m-%d')
-            }
-            serializer = ClientFormationSubscriptionSerializer(data=subscription_data, context=subscription_data)
-            if serializer.is_valid():
-                serializer.save()
+            elif not formation.is_free:
+                start_date = timezone.now()
+                formation_payment = formation_payment.last()
+                end_date = timezone.now() + timedelta(days=formation_payment.validity_days)
+                subscription_data = {
+                    'client': client.id,
+                    'formation_payment': formation_payment,
+                    'start_date': start_date,#.strftime('%Y-%m-%d'),
+                    'end_date': end_date,#.strftime('%Y-%m-%d')
+                }
+                serializer = ClientFormationSubscriptionSerializer(data=subscription_data, context=subscription_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    if not client in formation.participants.all():
+                        client.credit_vert += FORMATION_NOTE
+                        client.save()
+                    formation.participants.add(request.client)
+                    formation.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+            elif formation.is_free:
                 formation.participants.add(request.client)
                 formation.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                if not client in formation.participants.all():
+                    client.credit_vert += FORMATION_NOTE
+                    client.save()
+                return Response({'message':"Souscription reussi"}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         except Exception as e:
             print(traceback.format_exc())
             return Response({'erreur': str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -23,7 +23,9 @@ LOCAL_APPS = [
     'apps.evenements.apps.EvenementsConfig',
     'apps.formations.apps.FormationsConfig',
     'apps.marketplace.apps.MarketplaceConfig',
-    'apps.sante.apps.SanteConfig'
+    'apps.sante.apps.SanteConfig',
+    'apps.meteo.apps.MeteoConfig',
+    'apps.chatbot.apps.ChatbotConfig'
 ]
 
 THIRD_PARTY_APPS = [
@@ -31,6 +33,9 @@ THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'channels',
+    'daphne',
+    'django_crontab'
 ]
 
 INSTALLED_APPS = [
@@ -73,12 +78,13 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+# WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+CHANNEL_LAYER = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"host":[("127.0.0.1", 6379)]},
     }
 }
 
@@ -226,3 +232,7 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 
 
 SITE_NAME = "cité d'âme verte"
+
+CRONJOBS = [
+    ('*/2 * * * *', 'config.helpers.catastrophes_mg.collect_catastrophes_data', f'>> {os.getenv("LOG_FILE_PATH")} 2>&1'),
+]
