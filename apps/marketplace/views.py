@@ -4,7 +4,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import AnonymousUser
 
-from apps.marketplace.models import Produit, MarketPlace
+from apps.marketplace.models import Produit, MarketPlace, ImageProduit
 from apps.marketplace.serializers import ProduitSerializer, AchatProduitSerializer
 
 from config.helpers.permissions import IsAuthenticatedUserOrClient
@@ -120,10 +120,12 @@ class ProduitNewView(APIView):
     
     def post(self, request):
         # request.data = ['description', 'price', 'currency', 'nombre', 'titre']
+        # request.FILES = ['images']
         try:
             if not self.validate_data(request.data):
                 return Response({'erreur':'Tous les champs sont requis'}, status=status.HTTP_400_BAD_REQUEST)
             produit_data = request.data
+            images = request.FILES.gelist('images')
             IS_CLIENT = False
             if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
                 marketplace = request.client.marketplace
@@ -134,6 +136,8 @@ class ProduitNewView(APIView):
             serializer = ProduitSerializer(data=produit_data)
             if serializer.is_valid():
                 serializer.save()
+                for image in images:
+                    ImageProduit.objects.create(image=image, produit=serializer.data['id_produit'])
                 MARKET_SELLING_NOTE = int(os.getenv('MARKET_SELLING_NOTE'))
                 if IS_CLIENT:
                     client = request.client 

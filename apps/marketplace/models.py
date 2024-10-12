@@ -35,7 +35,8 @@ class AchatProduit(models.Model):
     
     class Meta:
         db_table = 'achat_produit'
-        
+
+
 class Produit(models.Model):
     id_produit = models.AutoField(primary_key=True)
     description = models.CharField(max_length=200)
@@ -52,3 +53,16 @@ class Produit(models.Model):
     
     class Meta:
         db_table = 'produits'
+        
+
+class ImageProduit(models.Model):
+    id_image_evenement = models.AutoField(primary_key=True)
+    image = models.ImageField(upload_to='marketplace/produits/images/')
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name='images')
+    created_at = models.DateTimeField(default=get_timezone())
+    
+    def __str__(self):
+        return self.image.name.split('/')[-1]
+    
+    class Meta:
+        db_table = 'image_produit'
