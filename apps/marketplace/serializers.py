@@ -56,6 +56,7 @@ class ProduitSerializer(serializers.ModelSerializer):
         
     def get_created_at(self,obj):
         return obj.created_at.strftime('%d-%m-%Y')
+
    
 class MarketPlaceSerializer(serializers.ModelSerializer):
     created_at = serializers.SerializerMethodField()

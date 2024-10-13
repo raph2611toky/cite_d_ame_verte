@@ -15,7 +15,7 @@ def get_timezone():
 class MarketPlace(models.Model):
     id_marketplace = models.AutoField(primary_key=True)
     
-    vendeur_type = models.OneToOneField(ContentType, on_delete=models.CASCADE)
+    vendeur_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     vendeur_id = models.PositiveIntegerField()     # Contient l'ID de l'objet (soit Client, soit User)
     vendeur = GenericForeignKey('vendeur_type', 'vendeur_id')
     
@@ -23,6 +23,7 @@ class MarketPlace(models.Model):
     
     class Meta:
         db_table = 'marketplace'
+        unique_together = ('vendeur_type', 'vendeur_id')
         
 class AchatProduit(models.Model):
     id_achat = models.AutoField(primary_key=True)
@@ -56,7 +57,7 @@ class Produit(models.Model):
         
 
 class ImageProduit(models.Model):
-    id_image_evenement = models.AutoField(primary_key=True)
+    id_image_produit = models.AutoField(primary_key=True)
     image = models.ImageField(upload_to='marketplace/produits/images/')
     produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name='images')
     created_at = models.DateTimeField(default=get_timezone())

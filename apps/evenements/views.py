@@ -25,7 +25,7 @@ class EvenementListView(APIView):
 
     def get(self, request):
         try:
-            evenements = Evenement.objects.all()
+            evenements = Evenement.objects.all().order_by('-id_evenement')
             serializer = EvenementSerializer(evenements, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -38,9 +38,9 @@ class EvenementFilterView(APIView):
     def get(self, request):
         try:
             if not request.user is None:
-                evenements = Evenement.objects.filter(organisateurs=request.user)
+                evenements = Evenement.objects.filter(organisateurs=request.user).order_by('-id_evenement')
             else:
-                evenements = Evenement.objects.filter(participants=request.client)
+                evenements = Evenement.objects.filter(participants=request.client).order_by('-id_evenement')
             serializer = EvenementSerializer(evenements, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:

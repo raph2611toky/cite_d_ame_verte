@@ -8,9 +8,9 @@ class CatastropheListView(APIView):
 
     def get(self, request):
         # Récupérer toutes les instances des catastrophes
-        cyclones = Cyclone.objects.all()
-        inondations = Inondation.objects.all()
-        secheresses = Secheresse.objects.all()
+        cyclones = Cyclone.objects.all().order_by('-id_cyclone')
+        inondations = Inondation.objects.all().order_by('-id_inondation')
+        secheresses = Secheresse.objects.all().order_by('-id_secheresse')
         autres_catastrophes = AutreCatastrophe.objects.all()
         tremblements_de_terre = TremblementDeTerre.objects.all()
         tsunamis = Tsunami.objects.all()

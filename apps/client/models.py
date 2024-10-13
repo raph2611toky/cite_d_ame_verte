@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from datetime import timedelta
+from django.db import IntegrityError
 from django.utils import timezone as django_timezone
 from django.contrib.contenttypes.models import ContentType
 from apps.marketplace.models import MarketPlace, AchatProduit
@@ -45,11 +46,16 @@ class Client(models.Model):
     @property
     def marketplace(self):
         content_type = ContentType.objects.get_for_model(self)
-        marketplace, created = MarketPlace.objects.get_or_create(
-            vendeur_type=content_type,
-            vendeur_id=self.id,
-            defaults={'created_at': get_timezone()}
-        )
+        try:
+            marketplace, created = MarketPlace.objects.get_or_create(
+                vendeur_type=content_type,
+                vendeur_id=self.id
+            )
+        except MarketPlace.DoesNotExist:
+            marketplace = MarketPlace.objects.create(
+                vendeur_type=content_type,
+                vendeur_id=self.id
+            )
         return marketplace
     
     @property

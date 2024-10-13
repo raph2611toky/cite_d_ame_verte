@@ -28,7 +28,7 @@ class FormationListView(APIView):
 
     def get(self, request):
         try:
-            formations = Formation.objects.all()
+            formations = Formation.objects.all().order_by('-id_formation')
             if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
                 serializer = FormationSerializer(formations, many=True, context={'permit_to_see_sessions':True, 'client':request.client})
             elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
@@ -48,10 +48,10 @@ class FormationFilterView(APIView):
     def get(self, request):
         try:
             if hasattr(request, 'client') and not isinstance(request.client, AnonymousUser):
-                formations = request.client.formations
+                formations = request.client.formations.order_by('-id_formation')
                 serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':True, 'client':request.client})
             elif hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
-                formations = request.user.formations
+                formations = request.user.formations.order_by('-id_formation')
                 serializer = FormationSerializer(formations, many=True,context={'permit_to_see_sessions':True,'user':request.user})
             else:
                 return Response({'erreur': 'Personne non identifié'}, status=status.HTTP_403_FORBIDDEN)

@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from dotenv import load_dotenv
 from datetime import timedelta
+from django.db import IntegrityError
 from django.contrib.contenttypes.models import ContentType
 from apps.marketplace.models import MarketPlace, AchatProduit
 from apps.sante.models import Woman
@@ -63,11 +64,16 @@ class User(AbstractUser):
     @property
     def marketplace(self):
         content_type = ContentType.objects.get_for_model(self)
-        marketplace, created = MarketPlace.objects.get_or_create(
-            vendeur_type=content_type,
-            vendeur_id=self.id,
-            defaults={'created_at': default_created_at()}
-        )
+        try:
+            marketplace, created = MarketPlace.objects.get_or_created(
+                vendeur_type=content_type,
+                vendeur_id=self.id
+            )
+        except MarketPlace.DoesNotExist:
+            marketplace = MarketPlace.objects.create(
+                vendeur_type=content_type,
+                vendeur_id=self.id
+            )
         return marketplace
     
     @property
