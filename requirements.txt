@@ -7,3 +7,8 @@ pillow==10.4.0
 pytz==2024.1
 python-dotenv==1.0.1
 aio-georss-gdacs
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.2
+django-crontab==0.7.1
+requests==2.32.3

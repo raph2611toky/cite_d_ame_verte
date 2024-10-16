@@ -51,7 +51,6 @@ def is_location_in_madagascar(entry):
     lat, lon = entry.coordinates
     return -25 <= lat <= -12 and 43 <= lon <= 50
 
-
 def save_catastrophe(entry):
     titre = entry['_rss_entry']['_source']['title']
     description = entry['_rss_entry']['_source']['description']

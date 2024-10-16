@@ -25,7 +25,8 @@ LOCAL_APPS = [
     'apps.marketplace.apps.MarketplaceConfig',
     'apps.sante.apps.SanteConfig',
     'apps.meteo.apps.MeteoConfig',
-    'apps.chatbot.apps.ChatbotConfig'
+    'apps.chatbot.apps.ChatbotConfig',
+    'apps.medical.apps.MedicalConfig',
 ]
 
 THIRD_PARTY_APPS = [

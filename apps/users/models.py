@@ -65,7 +65,7 @@ class User(AbstractUser):
     def marketplace(self):
         content_type = ContentType.objects.get_for_model(self)
         try:
-            marketplace, created = MarketPlace.objects.get_or_created(
+            marketplace, created = MarketPlace.objects.get_or_create(
                 vendeur_type=content_type,
                 vendeur_id=self.id
             )

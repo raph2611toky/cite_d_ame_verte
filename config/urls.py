@@ -10,4 +10,5 @@ urlpatterns = [
     path('api/', include('apps.marketplace.urls')),
     path('api/', include('apps.sante.urls')),
     path('api/', include('apps.meteo.urls')),
+    path('api/', include('apps.medical.urls')),
 ]
