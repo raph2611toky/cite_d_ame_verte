@@ -17,7 +17,7 @@ class DoctorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Doctor
-        fields = ['id_doctor', 'user', 'speciality', 'experience', 'location']
+        fields = ['id_doctor', 'user', 'speciality', 'location']
         
 class AppointmentSerializer(serializers.ModelSerializer):
     doctor = DoctorSerializer()

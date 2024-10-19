@@ -53,7 +53,6 @@ class LoginSerializer(serializers.Serializer):
             serializer = LoginClientSerializer(data=attrs)
             if not serializer.is_valid():
                 raise AuthenticationFailed()
-            print(serializer.validated_data)
             data = serializer.validated_data
             data['is_user'] = True
             return serializer.validated_data
@@ -66,6 +65,7 @@ class LoginSerializer(serializers.Serializer):
         data['access'] = str(refresh.access_token)
         data['name'] = users_logged.first_name+' '+users_logged.last_name
         data['is_user'] = False
+        data['sexe'] = users_logged.sexe
         return data
     
     def get_token(self, users):

@@ -63,6 +63,7 @@ class LoginClientSerializer(serializers.Serializer):
         refresh = self.get_token_for_client(client)
         data['access'] = str(refresh.access_token)
         data['name'] = client.first_name + ' ' + client.last_name
+        data['sexe'] = client.sexe
         return data
     
     def get_token_for_client(self, client):
