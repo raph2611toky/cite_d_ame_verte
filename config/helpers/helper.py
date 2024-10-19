@@ -9,7 +9,9 @@ from apps.users.models import User
 
 from dotenv import load_dotenv
 
+
 from datetime import timedelta
+import random
 import os
 import re
 import jwt
@@ -90,3 +92,13 @@ def extract_solde(body):
         return solde, currency
     else:
         return None
+    
+    
+def choose_doctor_and_get_date_time(self, speciality):
+    try:
+        doctor = random.choices(speciality.doctors.all())
+        last_appointment = doctor.appointments.last()
+        date_time = last_appointment.date_time + timedelta(hours=1)
+        return doctor, date_time
+    except Exception:
+        raise Exception({'erreur': 'Erreur lors de choix de docteur'})

@@ -25,7 +25,7 @@ class Speciality(models.Model):
 class Doctor(models.Model):
     id_doctor = models.AutoField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor')
-    speciality = models.ForeignKey(Speciality, on_delete=models.CASCADE)
+    speciality = models.ForeignKey(Speciality, on_delete=models.CASCADE, related_name='doctors')
     location = models.ForeignKey(Emplacement, on_delete=models.CASCADE, related_name='doctors')
     
     def __str__(self):
@@ -65,14 +65,13 @@ class Consultation(models.Model):
     
 class VideoCallSession(models.Model):
     id_session = models.AutoField(primary_key=True)
-    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name='video_sessions')
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='video_sessions')
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='video_sessions')
     room_name = models.CharField(max_length=100, unique=True)
     started_at = models.DateTimeField(default=get_timezone())
     ended_at = models.DateTimeField(blank=True, null=True)
     
     def __str__(self):
-        return f"Session between {self.doctor.user.first_name} and {self.client.user.first_name} - {self.room_name}"
+        return f"Session - {self.room_name}"
     
     class Meta:
         db_table = 'video_call_session'
