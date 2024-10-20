@@ -8,7 +8,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path('woman/info/last/', WomanLastInfoView.as_view(), name='woman last info')
+    path('woman/info/last/', WomanLastInfoView.as_view(), name='woman last info'),
     path('woman/info/', WomanInfoView.as_view(), name='woman info'), # GET
     path('menstruation/list/', MenstruationListView.as_view(), name='menstruation-list'),
     path('menstruation/new/', MenstruationNew.as_view(), name='menstruation-new'),
