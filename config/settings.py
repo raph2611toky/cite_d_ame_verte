@@ -177,7 +177,7 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 DEBUG = True
 
-ALLOWED_HOSTS = [IP_ADDR]
+ALLOWED_HOSTS = [IP_ADDR, 'localhost', '127.0.0.1']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
