@@ -8,25 +8,28 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
         
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'video_chat_{self.room_name}'
-           
+        self.username = self.scope["user"].username  # Assurez-vous d'avoir l'utilisateur dans la scope
+        
+        # Ajouter cet utilisateur au groupe et à la liste des membres
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
-        print(f'CONNECTED to {self.room_group_name} ......')
-        #print(self.scope)    
+        print(f'CONNECTED to {self.room_group_name} as {self.username} ......')
+
+        # Notifier les autres membres de la connexion et récupérer la liste des membres
+        await self.add_member()
+
+        # Envoyer la liste des membres connectés à la salle
+        await self.send_member_list()
 
     async def disconnect(self, close_code):
+        # Supprimer l'utilisateur du groupe et de la liste des membres
+        await self.remove_member()
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-        print('DISCONNECTED from group ......')
+        print(f'DISCONNECTED from {self.room_group_name} ......')
 
     async def receive(self, text_data):
         try:
             text_data_json = json.loads(text_data)
-            if 'offer' in text_data_json:
-                print('SEND OFFER ..\n')
-            elif 'answer' in text_data_json:
-                print('SEND ANSWER ..\n')
-            elif 'candidate' in text_data_json:
-                print('SEND CANDIDATE ...')
             offer = text_data_json.get('offer')
             answer = text_data_json.get('answer')
             candidate = text_data_json.get('candidate')
@@ -37,7 +40,8 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
                     self.room_group_name,
                     {
                         'type': 'video_chat_message',
-                        'message': message
+                        'message': message,
+                        'username': self.username
                     }
                 )
             if offer:
@@ -70,9 +74,11 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
 
     async def video_chat_message(self, event):
         message = event['message']
+        username = event.get('username', 'Anonymous')
         
         await self.send(text_data=json.dumps({
-            'message': message
+            'message': message,
+            'username': username
         }))
 
     async def video_chat_signal(self, event):
@@ -80,4 +86,43 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
             'offer': event.get('offer'),
             'answer': event.get('answer'),
             'candidate': event.get('candidate')
+        }))
+
+    async def add_member(self):
+        # Ajouter cet utilisateur à la liste des membres connectés (dans Redis par exemple)
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'member_update',
+                'action': 'join',
+                'username': self.username
+            }
+        )
+    
+    async def remove_member(self):
+        # Supprimer cet utilisateur de la liste des membres
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'member_update',
+                'action': 'leave',
+                'username': self.username
+            }
+        )
+
+    async def member_update(self, event):
+        # Envoyer une mise à jour de l'état des membres aux clients
+        if event['action'] == 'join':
+            print(f'{event["username"]} a rejoint la salle.')
+        elif event['action'] == 'leave':
+            print(f'{event["username"]} a quitté la salle.')
+
+    async def send_member_list(self):
+        # Récupérer la liste des membres dans Redis ou un autre mécanisme de stockage
+        # (Dans cet exemple, on simule une liste)
+        members = ["user1", "user2", "user3"]  # Vous devrez le remplacer par un stockage réel.
+        
+        await self.send(text_data=json.dumps({
+            'type': 'member_list',
+            'members': members
         }))

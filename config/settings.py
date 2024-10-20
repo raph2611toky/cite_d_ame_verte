@@ -36,6 +36,7 @@ THIRD_PARTY_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'channels',
     'daphne',
+    #'sslserver',
     'django_crontab'
 ]
 
@@ -82,11 +83,13 @@ TEMPLATES = [
 # WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-CHANNEL_LAYER = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"host":[("127.0.0.1", 6379)]},
-    }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
 }
 
 AUTH_PASSWORD_VALIDATORS = [
