@@ -10,6 +10,7 @@ class Woman(models.Model):
     woman = GenericForeignKey('woman_type', 'woman_id')
     
     average_cycle_length = models.IntegerField(default=28)
+    average_menstruation_duration = models.IntegerField(default=4)
     last_period_date = models.DateField(null=True, blank=True)
     notification_preference = models.BooleanField(default=True)
     

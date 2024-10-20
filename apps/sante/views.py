@@ -12,6 +12,17 @@ from datetime import timedelta, datetime
 import traceback
 
 
+class WomanLastInfoView(APIView):
+    permisssion_classes = [IsAuthenticatedWoman]
+    authentication_classes = [UserOrClientAuthentication]
+    
+    def get(self, request):
+        try:
+            woman = WomanSerializer(request.woman, context={'last_info':True}).data
+            return Response(woman, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 class WomanInfoView(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
@@ -42,7 +53,7 @@ class MenstruationNew(APIView):
     permission_classes = [IsAuthenticatedWoman]
     authentication_classes = [UserOrClientAuthentication]
 
-    # request.data.keys = ['start_date']
+    # request.data.keys = ['start_date', 'duration']
     def post(self, request):
         try:
             woman = request.woman
@@ -50,21 +61,23 @@ class MenstruationNew(APIView):
             last_menstruation = woman.menstruations.last()
 
             if last_menstruation:
-                last_menstruation.end_date = start_date
                 last_menstruation.cycle_length = (start_date - last_menstruation.start_date).days
                 last_menstruation.save()
 
-            
+            duration = request.data.get('duration')
+            end_date = start_date +timedelta(days=int(duration)) if duration is not None else start_date + timedelta(days=woman.average_menstruation_duration)
             data = {
-                'start_date': start_date
-            }
+                'start_date': start_date,
+                'end_date': end_date
+                }
 
             serializer = MenstruationSerializer(data=data)
             if serializer.is_valid():
                 menstruation = serializer.save(woman=woman)
                 woman.last_period_date = start_date
+                if end_date is not None:
+                    woman.average_mensturation_duration = (end_date - start_date).days
                 woman.save()
-                
                 woman.update_average_cycle_length()
                 
                 predicted_ovulation_date = start_date + timedelta(days=woman.average_cycle_length - 14)
@@ -85,10 +98,11 @@ class MenstruationNew(APIView):
                     )
                     
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+            print('serializer is not valid...')
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            print(traceback.format_exc())
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class WomanConfigureView(APIView):
