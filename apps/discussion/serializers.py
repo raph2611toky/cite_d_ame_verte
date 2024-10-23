@@ -23,11 +23,10 @@ class FilePlanningFamilialeSerializer(serializers.ModelSerializer):
 class PlanningFamilialeSerializer(serializers.ModelSerializer):
     created_at = serializers.SerializerMethodField()
     files = FilePlanningFamilialeSerializer(read_only=True, many=True)
-    doctor = DoctorSerializer(read_only=True)
     
     class Meta:
         model = PlanningFamiliale
-        fields = ['id_pf', 'description', 'titre', 'files', 'doctor', 'created_at']
+        fields = ['id_pf', 'description', 'titre', 'files', 'sender', 'created_at']
            
     def get_created_at(self, obj):
         return obj.created_at.strftime("%d-%m-%Y %H:%M:%S")

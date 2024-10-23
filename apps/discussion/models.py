@@ -57,7 +57,7 @@ class Discussion(models.Model):
     members_id = models.PositiveIntegerField()
     members = GenericForeignKey('members_type', 'members_id')
     
-    type = models.CharField(max_length=4, choices=CHOICES, default='')
+    type = models.CharField(max_length=4, choices=CHOICES, default='SS')
     created_at = models.DateTimeField(default=get_timezone())
     
     class Meta:
