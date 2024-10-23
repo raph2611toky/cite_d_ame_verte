@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
-from apps.medical.models import Speciality, Doctor, Appointment, Consultation, VideoCallSession
+from apps.medical.models import (Speciality, Doctor, Appointment, Consultation, VideoCallSession)
 from apps.client.serializers import ClientSerializer
 from apps.users.serializers import UserSerializer
+from django.conf import settings
 from apps.evenements.serializers import EmplacementSerializer
 
 class SpecialitySerializer(serializers.ModelSerializer):
@@ -55,3 +56,4 @@ class VideoCallSessionSerializer(serializers.ModelSerializer):
     
     def get_ended_at(self, obj):
         return obj.ended_at.strftime("%d-%m-%Y %H:%M:%S")
+    

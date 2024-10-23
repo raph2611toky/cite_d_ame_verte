@@ -29,5 +29,3 @@ class IsAuthenticatedWoman(BasePermission):
             return True
         else:
             raise PermissionDenied("Authorization failed: Client is not female")
-
-        return False

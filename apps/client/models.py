@@ -6,6 +6,7 @@ from django.utils import timezone as django_timezone
 from django.contrib.contenttypes.models import ContentType
 from apps.marketplace.models import MarketPlace, AchatProduit
 from apps.sante.models import Woman
+from apps.discussion.models import PlanningFamiliale
 
 from decimal import Decimal
 from dotenv import load_dotenv
@@ -73,6 +74,10 @@ class Client(models.Model):
             vendeur.add_voucher(produit.price)
         produit.achateurs.add(achat)
         return achat
+    
+    @property
+    def planning_familiale(self):
+        return PlanningFamiliale.objects.filter(sender_type=ContentType.objects.get_for_model(Client), sender_id=self.id)
     
     def add_voucher(self, solde):
         client_voucher = self.vouchers

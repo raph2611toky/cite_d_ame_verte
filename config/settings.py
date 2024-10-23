@@ -15,8 +15,6 @@ SECRET_KEY = 'django-insecure-wttkq7&*pnt9e(sh7e&r09g15@-kv5fop3_u1autog0l^uo@uj
 
 DEBUG = True
 
-ALLOWED_HOSTS = [IP_ADDR]
-
 LOCAL_APPS = [
     'apps.users.apps.UsersConfig',
     'apps.client.apps.ClientConfig',
@@ -27,6 +25,7 @@ LOCAL_APPS = [
     'apps.meteo.apps.MeteoConfig',
     'apps.chatbot.apps.ChatbotConfig',
     'apps.medical.apps.MedicalConfig',
+    'apps.discussion.apps.DiscussionConfig'
 ]
 
 THIRD_PARTY_APPS = [
@@ -80,17 +79,17 @@ TEMPLATES = [
     },
 ]
 
-# WSGI_APPLICATION = 'config.wsgi.application'
+#WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],
-        },
-    },
-}
+#CHANNEL_LAYERS = {
+#    'default': {
+#        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#        'CONFIG': {
+#            'hosts': [('127.0.0.1', 6379)],
+#        },
+#    },
+#}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -178,16 +177,19 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEBUG = True
 
 ALLOWED_HOSTS = [IP_ADDR, 'localhost', '127.0.0.1']
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DATABASE_NAME'),
         'USER': os.getenv('DATABASE_USER'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': IP_ADDR,
+        'HOST': '127.0.0.1',
         'PORT': os.getenv('DATABASE_PORT'),
         'OPTIONS':{
-        	'charset': 'utf8mb4'
+        	'charset': 'utf8mb4',
+            #'init_command': "SET SESSION require_secure_transport=OFF;",
+            #'ssl_mode': 'DISABLED'
         }
     }
 }

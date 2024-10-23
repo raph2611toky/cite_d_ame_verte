@@ -2,11 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from apps.medical.permissions import IsAuthenticatedDoctor
+from apps.medical.permissions import IsAuthenticatedDoctor, IsAuthenticatedWomanOrDoctor
 from apps.medical.models import Doctor, Appointment, Consultation, Speciality, VideoCallSession
 from apps.medical.serializers import DoctorSerializer, AppointmentSerializer, ConsultationSerializer,VideoCallSessionSerializer
 from apps.client.serializers import ClientSerializer
 from apps.client.permissions import IsAuthenticatedClient
+
 from django.contrib.auth.models import AnonymousUser
 
 from config.helpers.authentications import UserOrClientAuthentication
@@ -135,4 +136,4 @@ class ConfirmAppointementView(APIView):
         except Exception as e:
             print(e)
             return Response({'erreur':str(e)}, status=status.HTTP_400_BAD_REQUEST)
-          
+      

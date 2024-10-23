@@ -1,7 +1,11 @@
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
+from apps.discussion.models import PlanningFamiliale
 from apps.users.models import User
 from apps.client.models import Client
+from apps.sante.models import Woman
 from apps.evenements.models import Emplacement
 
 from config.helpers.helper import get_timezone
@@ -30,6 +34,10 @@ class Doctor(models.Model):
     
     def __str__(self):
         return self.user.first_name
+    
+    @property
+    def planning_familiale(self):
+        return PlanningFamiliale.objects.filter(sender_type=ContentType.objects.get_for_model(Doctor), sender_id=self.id)
     
     class Meta:
         db_table = 'doctor'
@@ -61,8 +69,7 @@ class Consultation(models.Model):
     
     class Meta:
         db_table = 'consultation'
-        
-    
+     
 class VideoCallSession(models.Model):
     id_session = models.AutoField(primary_key=True)
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='video_sessions')
@@ -75,3 +82,4 @@ class VideoCallSession(models.Model):
     
     class Meta:
         db_table = 'video_call_session'
+        
